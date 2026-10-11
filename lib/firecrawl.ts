@@ -1,7 +1,7 @@
 import { gte, sql } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
 
-export type Scraped = { ok: boolean; markdown: string; title: string | null; statusCode: number | null; finalUrl: string | null; via: "firecrawl" | "jina"; error?: string };
+export type Scraped = { ok: boolean; markdown: string; title: string | null; statusCode: number | null; finalUrl: string | null; via: "firecrawl" | "scrapedo" | "jina"; error?: string };
 
 export const dailyCap = () => Number(process.env.FIRECRAWL_DAILY_CAP ?? 60);
 

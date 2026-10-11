@@ -1,5 +1,6 @@
 import { normalizeName } from "@/lib/identity/normalize";
 import { firecrawlScrape, jinaScrape } from "@/lib/firecrawl";
+import { scrapeDo } from "@/lib/scrapedo";
 import { canonicalize, decodeGoogleNews, isGenericUrl } from "./url";
 import { normalizeCity } from "@/lib/util/city";
 
@@ -13,7 +14,7 @@ export type LinkResult = {
   title: string | null;
   text: string; // page text, for tier extraction (may be empty)
   credits: number; // Firecrawl credits spent
-  via: "fetch" | "firecrawl" | "jina" | "none";
+  via: "fetch" | "firecrawl" | "scrapedo" | "jina" | "none";
 };
 
 const UA = "Mozilla/5.0 (compatible; FrontRowBot/1.0; personal non-commercial concert alerts)";
@@ -100,7 +101,8 @@ export async function checkUrl(rawUrl: string, ctx: { names: string[]; allowFire
   }
 
   // Bot wall: use a real scraper.
-  const attempts = [ctx.allowFirecrawl ? firecrawlScrape : null, jinaScrape].filter(Boolean) as (typeof firecrawlScrape)[];
+  // Firecrawl while its daily budget lasts, then Scrape.do (1 credit, gets past BookMyShow), then Jina.
+  const attempts = [ctx.allowFirecrawl ? firecrawlScrape : null, (u: string) => scrapeDo(u), jinaScrape].filter(Boolean) as ((u: string) => Promise<Awaited<ReturnType<typeof firecrawlScrape>>>)[];
   for (const scrape of attempts) {
     const s = await scrape(url);
     if (scrape === firecrawlScrape) credits += 1;

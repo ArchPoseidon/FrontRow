@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
 import { firecrawlScrape, jinaScrape } from "@/lib/firecrawl";
+import { scrapeDo } from "@/lib/scrapedo";
 import { sha256 } from "@/lib/util/hash";
 import { insertRawItem, markSource } from "./shared";
 
@@ -31,6 +32,15 @@ export async function collectListing(db: Db, source: typeof schema.sources.$infe
   let credits = 0;
   let scraped = opts.creditsLeft > 0 ? await firecrawlScrape(source.url) : null;
   if (scraped) credits = 1;
+  // Firecrawl, then Scrape.do (plain, then with a real browser if the page needs JavaScript), then Jina.
+  if (!scraped?.ok) {
+    let d = await scrapeDo(source.url);
+    if (d.ok && d.markdown.length < 1500) {
+      const rendered = await scrapeDo(source.url, { render: true });
+      if (rendered.ok) d = rendered;
+    }
+    scraped = d.ok ? d : null;
+  }
   if (!scraped?.ok) scraped = await jinaScrape(source.url);
   if (!scraped.ok || scraped.markdown.length < 300) {
     const fails = (source.consecutiveFailures ?? 0) + 1;

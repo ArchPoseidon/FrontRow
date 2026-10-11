@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { count, desc, eq, gte, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { creditsUsedToday, dailyCap } from "@/lib/firecrawl";
+import { monthlyCap as sdMonthly, scrapedoUsed } from "@/lib/scrapedo";
 
 // Public. Phase 0 reports DB reachability and real counts only; per-source
 // status and job runs are added once collectors exist.
@@ -28,10 +29,11 @@ export async function GET() {
     // Last run per job: real rows only, empty until a job has run.
     // Per-user scan runs are folded into one public "scan-now" entry (no user ids leak).
     const jobName = (j: string) => (j.startsWith("scan-now:") ? "scan-now" : j);
-    const jobs = [...new Set(runs.map((r) => jobName(r.job)))].map((job) => {
+    const jobs = [...new Set(runs.filter((r) => r.job !== "scrapedo").map((r) => jobName(r.job)))].map((job) => {
       const r = runs.find((x) => jobName(x.job) === job)!;
       return { job, startedAt: r.startedAt, finishedAt: r.finishedAt, itemsIn: r.itemsIn, eventsNew: r.eventsNew, alertsSent: r.alertsSent, errors: r.errors };
     });
+    const sd = await scrapedoUsed().catch(() => ({ month: 0, day: 0 }));
     const firecrawl = { used: await creditsUsedToday(db), cap: dailyCap() };
     const linkRows = await db.select({ s: schema.events.ticketStatus, n: count() }).from(schema.events).groupBy(schema.events.ticketStatus);
     const linkCounts = Object.fromEntries(linkRows.map((r) => [r.s ?? "unchecked", r.n]));
@@ -59,6 +61,7 @@ export async function GET() {
       jobs,
       firecrawlCreditsToday: firecrawl.used,
       firecrawlDailyCap: firecrawl.cap,
+      scrapedo: { creditsLast30Days: sd.month, creditsToday: sd.day, monthlyCap: sdMonthly() },
       links: linkCounts,
     });
   } catch (e) {

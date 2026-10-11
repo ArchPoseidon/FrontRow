@@ -60,3 +60,7 @@ The System pulse on the radar turns each dot green once its job has run. The hea
 3. Go to **APIs & Services > OAuth consent screen > Data Access** (or **Scopes**), click **Add or remove scopes**, tick `.../auth/calendar.events`, and save.
 4. Nothing else changes: the redirect URI is the same one sign-in already uses. While the app is in Testing mode, only the test users you listed can connect Google Calendar, and Google shows them an "unverified app" screen once (**Continue** to proceed).
 5. In the app, open **Profile > Google Calendar > Connect Google Calendar**, or tap **Add to calendar** on any show.
+
+## Backup crawler
+
+Firecrawl is the main crawler (free credits, daily cap). When it is out of credits, rate-limited or failing, the app falls back to Scrape.do (`CRAWLER_API_KEY`, 1,000 free credits a month, capped at 900), then to Jina Reader. Usage shows in the daily heartbeat message.

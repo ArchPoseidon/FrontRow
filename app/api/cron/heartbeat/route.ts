@@ -2,6 +2,7 @@ import { and, count, eq, gte, ne } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { cronAuthorized, forbidden } from "@/lib/jobs";
 import { creditsUsedToday, dailyCap } from "@/lib/firecrawl";
+import { monthlyCap as sdMonthly, scrapedoUsed } from "@/lib/scrapedo";
 import { esc, sendMessage } from "@/lib/notify/telegram";
 import { finishRun, startRun } from "@/lib/collectors/shared";
 
@@ -24,10 +25,12 @@ export async function GET(req: Request) {
       db.select({ s: schema.events.ticketStatus, n: count() }).from(schema.events).groupBy(schema.events.ticketStatus),
       db.select().from(schema.runs).where(gte(schema.runs.startedAt, since)),
     ]);
+    const sd = await scrapedoUsed().catch(() => ({ month: 0, day: 0 }));
     const bad = sources.filter((s) => !s.enabled || (s.consecutiveFailures ?? 0) > 0 || s.lastError);
     const ok = sources.length - bad.length;
     const never = sources.filter((s) => !s.lastOkAt && s.enabled).length;
-    const jobsRan = new Set(runs.map((r) => r.job.replace(/^scan-now:.*/, "scan-now"))).size;
+    const real = runs.filter((r) => r.job !== "scrapedo");
+    const jobsRan = new Set(real.map((r) => r.job.replace(/^scan-now:.*/, "scan-now"))).size;
     const lc = Object.fromEntries(links.map((l) => [l.s ?? "unchecked", l.n]));
     const lines = [
       "<b>FrontRow heartbeat</b>",
@@ -36,10 +39,11 @@ export async function GET(req: Request) {
       `Alerts sent (24h): ${alerts.n}`,
       `Firecrawl credits (24h): ${used}/${dailyCap()}`,
       `Ticket links: ${lc.exact ?? 0} verified, ${(lc.unchecked ?? 0) + (lc.blocked ?? 0)} pending, ${(lc.generic ?? 0) + (lc.broken ?? 0) + (lc.mismatch ?? 0) + (lc.none ?? 0)} without a direct page`,
-      `Job runs (24h): ${runs.length} across ${jobsRan} jobs`,
+      `Backup crawler (Scrape.do): ${sd.day} credits today, ${sd.month}/${sdMonthly()} this month`,
+      `Job runs (24h): ${real.length} across ${jobsRan} jobs`,
     ];
     if (spotify?.spotify_connections?.broken) lines.push("🔴 Spotify connection is broken: reconnect it in Setup");
-    if (!runs.length) lines.push("🔴 No jobs ran in the last 24 hours. Check cron-job.org");
+    if (!real.length) lines.push("🔴 No jobs ran in the last 24 hours. Check cron-job.org");
     for (const s of bad) lines.push(`🔴 ${esc(s.name)}: ${esc((s.lastError ?? (s.enabled ? "failing" : "disabled")).slice(0, 80))}`);
     const chatId = owner?.telegramChatId;
     if (!chatId) {

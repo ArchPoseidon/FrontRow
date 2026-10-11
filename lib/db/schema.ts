@@ -317,6 +317,7 @@ export const runs = pgTable("runs", {
   eventsNew: integer("events_new"),
   alertsSent: integer("alerts_sent"),
   firecrawlCredits: integer("firecrawl_credits"),
+  scrapedoCredits: integer("scrapedo_credits"),
   errors: jsonb("errors"),
 });
 

@@ -22,6 +22,13 @@
       "when": 1791754367874,
       "tag": "0002_calendar_entries",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791756351607,
+      "tag": "0003_scrapedo_credits",
+      "breakpoints": true
     }
   ]
 }
