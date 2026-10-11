@@ -11,3 +11,4 @@
 - `/api/health` is public and reports only real values; per-job runs and Firecrawl credits are empty until those jobs exist.
 - Secrets live in `.env.local` (gitignored) and in Vercel env vars; `.env.example` lists names only.
 - shadcn/ui is deferred until the first component that needs it (Phase 1+), to keep Phase 0 minimal.
+- Production URL: https://frontrow-pi-three.vercel.app (Vercel alias, stable). Deployed from CLI for now; GitHub link to be added so pushes to main deploy.
