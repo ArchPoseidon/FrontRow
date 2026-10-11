@@ -12,7 +12,7 @@ const TABS = [
 
 function Icon({ d }: { d: string }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d={d} />
     </svg>
   );
@@ -27,9 +27,9 @@ function useOn() {
 export function DesktopNav() {
   const on = useOn();
   return (
-      <nav aria-label="Main" className="hidden items-center gap-5 text-sm sm:flex">
+      <nav aria-label="Main" className="hidden items-center gap-7 sm:flex">
         {TABS.map((t) => (
-          <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={on(t.href) ? "font-bold text-magenta" : "text-muted hover:text-foreground"}>
+          <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={`font-display text-2xl leading-none font-extrabold tracking-wide uppercase ${on(t.href) ? "text-magenta" : "text-muted hover:text-foreground"}`}>
             {t.label}
           </Link>
         ))}
@@ -41,9 +41,9 @@ export function DesktopNav() {
 export function BottomBar() {
   const on = useOn();
   return (
-      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-surface-border bg-background/95 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-surface-border bg-background/95 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
         {TABS.map((t) => (
-          <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={`flex flex-col items-center gap-0.5 px-3 text-[11px] ${on(t.href) ? "font-bold text-magenta" : "text-muted"}`}>
+          <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={`font-display flex flex-col items-center gap-1 px-2 text-xl leading-none font-extrabold tracking-wide uppercase ${on(t.href) ? "text-magenta" : "text-muted"}`}>
             <Icon d={t.d} />
             {t.label}
           </Link>

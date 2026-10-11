@@ -7,8 +7,8 @@ export function AppHeader({ name, image }: { isOwner?: boolean; name?: string | 
   return (
     <>
     <header className="sticky top-0 z-20 border-b border-surface-border bg-background/90 backdrop-blur">
-      <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-6 px-4">
-        <Link href="/radar" className="font-display text-2xl font-black tracking-wide text-wordmark">FrontRow</Link>
+      <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-6 px-4">
+        <Link href="/radar" className="font-display text-3xl font-black tracking-wide text-wordmark">FrontRow</Link>
         <div className="flex flex-1 items-center">
           <DesktopNav />
         </div>
