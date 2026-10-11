@@ -24,9 +24,14 @@ async function Loaded() {
           <Link href="/?signin=1" className="rounded-card bg-background px-3 py-1 font-medium text-foreground">Build your own</Link>
         </div>
       </div>
+      <section className="concert-bg" style={{ ["--concert-img" as string]: "url(/concert/hero.jpg)" }}>
+        <div className="mx-auto w-full max-w-5xl px-4 py-8">
+          <p className="text-xs font-bold tracking-widest text-muted uppercase">Live demo · {d.events.length} real shows</p>
+          <h1 className="font-display text-6xl leading-[0.9] font-black sm:text-7xl">{first}&apos;s radar</h1>
+        </div>
+      </section>
       <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        <h1 className="mb-6 text-2xl font-semibold tracking-tight">{first}&apos;s radar</h1>
-        <RadarView {...d} homeCity={owner.homeCity ?? "Bengaluru"} readOnly />
+        <RadarView {...d} homeCity={owner.homeCity ?? "Bengaluru"} readOnly hasArtists={d.artists.length > 0} />
       </main>
     </>
   );

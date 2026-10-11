@@ -50,9 +50,13 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
   const [tiers, srcs, dismissed] = await Promise.all([
     db.select().from(schema.eventTiers).where(inArray(schema.eventTiers.eventId, ids)),
     db.select().from(schema.eventSources).where(inArray(schema.eventSources.eventId, ids)),
-    db.select({ eventId: schema.alerts.eventId }).from(schema.alerts).where(and(eq(schema.alerts.userId, viewer.userId), eq(schema.alerts.userAction, "dismissed"))),
+    db.select({ eventId: schema.alerts.eventId, action: schema.alerts.userAction }).from(schema.alerts).where(and(eq(schema.alerts.userId, viewer.userId), inArray(schema.alerts.userAction, ["dismissed", "going", "saved", "bought"]))),
   ]);
-  const dis = new Set(dismissed.map((d) => d.eventId));
+  const dis = new Set(dismissed.filter((d) => d.action === "dismissed").map((d) => d.eventId));
+  // "bought it" in Telegram and "Going" on the dashboard are the same thing.
+  const marks = new Map<string, "going" | "saved">();
+  for (const d of dismissed) if (d.action === "going" || d.action === "bought") marks.set(d.eventId, "going");
+  for (const d of dismissed) if (d.action === "saved" && !marks.has(d.eventId)) marks.set(d.eventId, "saved");
   const home = normalizeCity(viewer.homeCity ?? "Bengaluru");
   const out: EventView[] = [];
   for (const { e, a, priority } of rows) {
@@ -89,6 +93,7 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
       countdown,
       inHomeCity: normalizeCity(e.city) === home,
       dismissed: isDismissed,
+      mine: marks.get(e.id) ?? null,
     });
   }
   const rank = { red: 0, amber: 1, info: 2 } as const;

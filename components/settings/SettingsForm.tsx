@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 type S = { name: string | null; email: string | null; image: string | null; homeCity: string; watchCities: string[]; emailEnabled: boolean; telegramLinked: boolean; emailAvailable: boolean; cities: string[] };
 type Link = { linked: boolean; url?: string | null; configured?: boolean };
 
-export function SettingsForm({ isOwner }: { isOwner: boolean }) {
+export function SettingsForm({ isOwner, embedded }: { isOwner: boolean; embedded?: boolean }) {
   const [s, setS] = useState<S | null>(null);
   const [link, setLink] = useState<Link | null>(null);
   const [msg, setMsg] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
@@ -62,7 +62,7 @@ export function SettingsForm({ isOwner }: { isOwner: boolean }) {
     <div className="flex flex-col gap-6">
       {msg && <p role="status" className={`rounded-card border px-4 py-2 text-sm ${msg.tone === "ok" ? "border-emerald-500/60" : "border-urgency-red/60"}`}>{msg.text}</p>}
 
-      <section className={card}>
+      {!embedded && <section className={card}>
         <h2 className="font-semibold">Profile</h2>
         <div className="flex items-center gap-3">
           {s.image && (
@@ -74,7 +74,7 @@ export function SettingsForm({ isOwner }: { isOwner: boolean }) {
             <p className="text-sm text-muted">{s.email} · from your Google account</p>
           </div>
         </div>
-      </section>
+      </section>}
 
       <section className={card}>
         <h2 className="font-semibold">Alert channels</h2>

@@ -30,6 +30,8 @@ export type EventView = {
   countdown: { to: string; label: string } | null; // live countdown target
   inHomeCity: boolean;
   dismissed?: boolean;
+  mine?: "going" | "saved" | null; // the viewer's own mark
+  artistGenres?: string[];
 };
 
 export type ArtistView = {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArtistAvatar } from "@/components/artist/ArtistAvatar";
+import { ArtistPhoto } from "@/components/artist/ArtistPhoto";
 
 type Suggestion = { artistId: string; name: string; imageUrl: string | null; next: { city: string | null; date: string | null; status: string | null } };
 
@@ -47,21 +47,22 @@ export function TouringNow({ onAdded }: { onAdded: () => void }) {
   return (
     <section className="space-y-3" aria-label="Touring India now">
       <div>
-        <h2 className="text-lg font-semibold">Touring India now</h2>
+        <h2 className="font-display text-3xl font-extrabold">Touring India now</h2>
         <p className="text-sm text-muted">Real upcoming shows we&apos;ve already found. Add one to see a result right away.</p>
       </div>
       <ul className="flex gap-3 overflow-x-auto pb-1">
         {items.map((s) => (
-          <li key={s.artistId} className="flex w-56 shrink-0 flex-col gap-3 rounded-card border border-surface-border bg-surface p-3">
-            <div className="flex items-center gap-3">
-              <ArtistAvatar name={s.name} imageUrl={s.imageUrl} size={44} />
-              <div className="min-w-0">
-                <p className="truncate font-medium">{s.name}</p>
-                <p className="truncate text-xs text-muted">{s.next.city ?? "India"} · {fmt(s.next.date)}</p>
+          <li key={s.artistId} className="relative w-44 shrink-0 overflow-hidden rounded-card border border-surface-border">
+            <div className="relative aspect-[4/5]">
+              <ArtistPhoto name={s.name} imageUrl={s.imageUrl} rounded={false} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-2.5">
+                <p className="font-display truncate text-2xl leading-none font-extrabold">{s.name}</p>
+                <p className="truncate text-[11px] text-white/75">{s.next.city ?? "India"} · {fmt(s.next.date)}</p>
               </div>
             </div>
-            <button onClick={() => add(s.artistId)} disabled={busy === s.artistId} className="rounded-card border border-surface-border px-3 py-1.5 text-sm font-medium disabled:opacity-50">
-              {busy === s.artistId ? "Adding…" : "Add"}
+            <button onClick={() => add(s.artistId)} disabled={busy === s.artistId} className="w-full bg-accent py-2 text-sm font-bold text-accent-foreground disabled:opacity-50">
+              {busy === s.artistId ? "Adding…" : "+ Add"}
             </button>
           </li>
         ))}

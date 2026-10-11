@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArtistAvatar } from "@/components/artist/ArtistAvatar";
+import { ArtistPhoto } from "@/components/artist/ArtistPhoto";
+import { ConnectOverlay, ConnectSpotifyButton } from "@/components/spotify/ConnectSpotify";
+import { SpotifyMark } from "@/components/spotify/SpotifyMark";
 import { NEXT_PRIORITY, PRIORITY_LABEL, type Candidate, type MyArtist, type Priority, type ReviewItem } from "@/components/artist/types";
 import { ReviewTray } from "./ReviewTray";
 import { TouringNow } from "./TouringNow";
@@ -24,7 +26,14 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return j as T;
 }
 
-export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number; spotifyFlag?: string }) {
+export function ArtistsStep({ initialStep, spotifyFlag, manage }: { initialStep: number; spotifyFlag?: string; manage?: boolean }) {
+  // Right after Spotify sends the user back with imported artists, play the importing animation for a beat.
+  const [importing, setImporting] = useState(spotifyFlag === "imported");
+  useEffect(() => {
+    if (!importing) return;
+    const t = setTimeout(() => setImporting(false), 3600);
+    return () => clearTimeout(t);
+  }, [importing]);
   const [step, setStep] = useState(Math.min(Math.max(initialStep, 1), 4));
   const [artists, setArtists] = useState<MyArtist[] | null>(null);
   const [review, setReview] = useState<ReviewItem[]>([]);
@@ -188,10 +197,10 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
       <header className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">{["", "Who do you want to catch live?", "Confirm your artists", "Where should we watch?", "How should we alert you?"][step]}</h1>
-          <span className="text-sm text-muted">Step {step} of 4</span>
+          <h1 className="font-display text-5xl leading-[0.92] font-black">{manage ? "Add more artists" : ["", "Who do you want to catch live?", "Confirm your artists", "Where should we watch?", "How should we alert you?"][step]}</h1>
+          {!manage && <span className="text-sm text-muted">Step {step} of 4</span>}
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-surface-border" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={4}>
+        <div hidden={!!manage} className="h-1.5 overflow-hidden rounded-full bg-surface-border" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={4}>
           <div className="h-full bg-accent transition-all" style={{ width: `${(step / 4) * 100}%` }} />
         </div>
         <p className="text-sm text-muted" aria-live="polite" hidden={step > 2}>
@@ -234,9 +243,10 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
                 </button>
               </div>
             ) : (
-              <a href="/api/spotify/login" className="flex items-center justify-center rounded-card border border-surface-border bg-surface px-4 py-3 font-medium transition hover:border-accent">
+              <ConnectSpotifyButton className="flex items-center justify-center gap-3 rounded-card bg-[#1DB954] px-4 py-3.5 font-bold text-black transition hover:brightness-110">
+                <SpotifyMark size={22} />
                 {spotify?.broken ? "Spotify connection lost. Reconnect" : "Connect Spotify"}
-              </a>
+              </ConnectSpotifyButton>
             )}
             <div className="relative">
               <input
@@ -257,7 +267,7 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
               <ul className="flex flex-col gap-2">
                 {results.map((c) => (
                   <li key={c.spotifyId ?? c.mbid} className="flex items-center gap-3 rounded-card border border-surface-border bg-surface p-2">
-                    <ArtistAvatar name={c.name} imageUrl={c.imageUrl} size={48} />
+                    <div className="h-14 w-14 shrink-0"><ArtistPhoto name={c.name} imageUrl={c.imageUrl} /></div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{c.name}</p>
                       <p className="truncate text-xs text-muted">{c.genres?.length ? c.genres.join(", ") : c.hint ?? (c.source === "musicbrainz" ? "From MusicBrainz" : "")}</p>
@@ -305,7 +315,7 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
 
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="font-semibold">Your artists</h2>
+          <h2 className="font-display text-3xl font-extrabold">Your artists</h2>
           {step === 2 && <p className="text-xs text-muted">Tap a card to cycle Follow → Must-see → Muted</p>}
         </div>
         {artists === null && !loadError && (
@@ -321,24 +331,32 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
           </p>
         )}
         {artists && artists.length > 0 && (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {artists.map((a) => (
-              <li key={a.id} className={`relative flex flex-col items-center gap-2 rounded-card border bg-surface p-3 text-center ${a.priority === "must_see" ? "border-accent" : "border-surface-border"} ${a.priority === "muted" ? "opacity-50" : ""}`}>
-                <button onClick={() => cyclePriority(a)} aria-label={`${a.name}: ${PRIORITY_LABEL[a.priority]}. Tap to change.`} className="flex w-full flex-col items-center gap-2">
-                  <ArtistAvatar name={a.name} imageUrl={a.imageUrl} size={64} />
-                  <span className="w-full truncate text-sm font-medium">{a.name}</span>
-                  <span className="text-xs text-muted">{PRIORITY_LABEL[a.priority]}</span>
+              <li key={a.id} className="relative">
+                <button onClick={() => cyclePriority(a)} aria-label={`${a.name}: ${PRIORITY_LABEL[a.priority]}. Tap to change.`} className={`group relative block aspect-[4/5] w-full overflow-hidden rounded-card border-2 text-left ${a.priority === "must_see" ? "border-accent" : "border-transparent"} ${a.priority === "muted" ? "opacity-40" : ""}`}>
+                  <ArtistPhoto name={a.name} imageUrl={a.imageUrl} rounded={false} />
+                  <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
+                  {a.priority === "must_see" && <span className="absolute top-2 left-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-foreground">Must-see</span>}
+                  <span className="absolute inset-x-0 bottom-0 p-2.5">
+                    <span className="font-display block truncate text-2xl leading-none font-extrabold">{a.name}</span>
+                    <span className="text-[11px] text-white/70">{PRIORITY_LABEL[a.priority]}{a.identityStatus === "unverified" ? " · Name only" : ""}</span>
+                  </span>
                 </button>
-                {a.identityStatus === "unverified" && <span className="rounded-full border border-surface-border px-2 py-0.5 text-[10px] text-muted">Name only</span>}
-                <button onClick={() => reopen(a)} className="text-[11px] text-muted underline underline-offset-2 hover:text-foreground">Is this the right artist?</button>
-                <button onClick={() => remove(a)} aria-label={`Remove ${a.name}`} className="absolute top-1 right-2 text-lg leading-none text-muted hover:text-foreground">×</button>
+                <button onClick={() => remove(a)} aria-label={`Remove ${a.name}`} className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-sm leading-none text-white/80 hover:text-white">×</button>
+                {a.identityStatus !== "verified" && <button onClick={() => reopen(a)} className="mt-1 text-[11px] text-muted underline underline-offset-2 hover:text-foreground">Is this the right artist?</button>}
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <footer className="flex items-center justify-between gap-3 border-t border-surface-border pt-4">
+      {manage && (
+        <footer className="flex items-center justify-end border-t border-surface-border pt-4">
+          <a href="/profile" className="rounded-card bg-accent px-5 py-2.5 font-bold text-accent-foreground">Done, back to profile</a>
+        </footer>
+      )}
+      {!manage && <footer className="flex items-center justify-between gap-3 border-t border-surface-border pt-4">
         {step === 2 ? (
           <button onClick={() => saveStep(1)} className="text-sm text-muted underline underline-offset-2">Back</button>
         ) : (
@@ -356,9 +374,10 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
             {review.length > 0 && <p className="text-xs text-muted">Resolve or remove the {review.length} unconfirmed first.</p>}
           </div>
         )}
-      </footer>
+      </footer>}
         </>
       )}
+      {importing && <ConnectOverlay phase="importing" />}
       {step === 3 && <CitiesStep onBack={() => saveStep(2)} onNext={() => saveStep(4)} />}
       {step === 4 && <AlertsStep onBack={() => saveStep(3)} />}
     </div>

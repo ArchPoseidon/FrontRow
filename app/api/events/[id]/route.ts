@@ -17,11 +17,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!u) return unauthorized();
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "Not found" }, { status: 404 });
-  const body = (await req.json().catch(() => ({}))) as { undo?: boolean };
-  const action = body.undo ? null : "dismissed";
+  // action: "going" | "saved" | "dismissed" | "clear" (also the older { undo: true })
+  const body = (await req.json().catch(() => ({}))) as { undo?: boolean; action?: string };
+  const allowed = ["going", "saved", "dismissed"];
+  const action = body.undo || body.action === "clear" ? null : allowed.includes(body.action ?? "") ? body.action! : "dismissed";
   await u.db
     .insert(schema.alerts)
-    .values({ userId: u.user.id, eventId: id, kind: "new_show", channel: "telegram", status: "dismissed", userAction: action })
+    .values({ userId: u.user.id, eventId: id, kind: "new_show", channel: "telegram", status: "marked", userAction: action })
     .onConflictDoUpdate({ target: [schema.alerts.userId, schema.alerts.eventId, schema.alerts.kind, schema.alerts.channel], set: { userAction: action } });
   // Mirror onto the email row if there is one, so every channel agrees.
   await u.db.update(schema.alerts).set({ userAction: action }).where(and(eq(schema.alerts.eventId, id), eq(schema.alerts.userId, u.user.id)));

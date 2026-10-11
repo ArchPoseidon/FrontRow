@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArtistAvatar } from "@/components/artist/ArtistAvatar";
+import { ArtistPhoto } from "@/components/artist/ArtistPhoto";
 
 type Show = {
   eventId: string;
@@ -107,7 +107,7 @@ export function FirstRun() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{summary ? "Here's what we found" : "Checking your artists"}</h1>
+        <h1 className="font-display text-6xl leading-[0.9] font-black">{summary ? "Here's what we found" : "Checking your artists"}</h1>
         <p className="text-sm text-muted">{summary ? "Real shows, with their sources. Nothing here is made up." : "This takes about a minute. Results appear as they come in."}</p>
       </header>
 
@@ -150,7 +150,7 @@ export function FirstRun() {
               {summary.shows.map((s) => (
                 <li key={s.eventId} className="space-y-3 rounded-card border border-surface-border bg-surface p-4">
                   <div className="flex items-center gap-3">
-                    <ArtistAvatar name={s.artistName} imageUrl={s.imageUrl} size={52} />
+                    <div className="h-14 w-14 shrink-0"><ArtistPhoto name={s.artistName} imageUrl={s.imageUrl} /></div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold">{s.artistName}</p>
                       <p className="truncate text-sm text-muted">{[s.venue, s.city].filter(Boolean).join(" · ") || "Venue to be announced"}</p>
@@ -191,7 +191,7 @@ export function FirstRun() {
               <ul className="divide-y divide-surface-border rounded-card border border-surface-border bg-surface">
                 {summary.quiet.slice(0, 30).map((q) => (
                   <li key={q.artistId} className="flex items-center gap-3 px-3 py-2">
-                    <ArtistAvatar name={q.name} imageUrl={q.imageUrl} size={32} />
+                    <div className="h-9 w-9 shrink-0"><ArtistPhoto name={q.name} imageUrl={q.imageUrl} /></div>
                     <span className="min-w-0 flex-1 truncate text-sm">{q.name}</span>
                     <span className="shrink-0 text-xs text-muted">{q.lastIndia ?? "Not yet found in India"}</span>
                   </li>

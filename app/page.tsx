@@ -5,21 +5,22 @@ import { connection } from "next/server";
 import { and, asc, desc, eq, gte, ne } from "drizzle-orm";
 import { auth, signIn } from "@/auth";
 import { getDb, schema } from "@/lib/db";
-import { getPublicCounters } from "@/lib/data/radar";
+import { getEventView, getPublicCounters } from "@/lib/data/radar";
 import { todayIST } from "@/lib/util/ist";
+import { EventCard } from "@/components/event-card/EventCard";
 
 const STEPS = [
-  { n: "1", t: "Tell us who you love", d: "Connect Spotify, search, or paste a list of artists. Every artist is matched to the right person, with a photo." },
+  { n: "1", t: "Tell us who you love", d: "Connect Spotify, search, or paste a list. Every artist is matched to the right person, with a photo." },
   { n: "2", t: "We watch the calendar", d: "News, ticketing pages and web search, checked all day for shows in India." },
-  { n: "3", t: "You hear first", d: "A Telegram alert the moment a show is announced, with the venue, date, tickets and whether early-bird is open." },
+  { n: "3", t: "You hear first", d: "A Telegram alert the moment a show is announced, with the exact ticket page and whether tickets are live." },
 ];
 
-async function GoogleButton({ searchParams }: { searchParams: Promise<{ signin?: string }> }) {
+async function Buttons({ searchParams }: { searchParams: Promise<{ signin?: string }> }) {
   const [session, sp] = await Promise.all([auth(), searchParams]);
   if (session?.user) redirect("/radar");
   return (
     <div className="flex flex-col gap-3">
-      {sp.signin && <p role="status" className="rounded-card border border-surface-border px-4 py-2 text-sm text-muted">Sign in to continue.</p>}
+      {sp.signin && <p role="status" className="rounded-card border border-surface-border bg-black/40 px-4 py-2 text-sm">Sign in to continue.</p>}
       <div className="flex flex-wrap gap-3">
         <form
           action={async () => {
@@ -27,9 +28,9 @@ async function GoogleButton({ searchParams }: { searchParams: Promise<{ signin?:
             await signIn("google", { redirectTo: "/radar" });
           }}
         >
-          <button type="submit" className="rounded-card bg-accent px-6 py-3 font-medium text-accent-foreground transition hover:opacity-90">Continue with Google</button>
+          <button type="submit" className="rounded-card bg-accent px-7 py-3.5 text-base font-bold text-accent-foreground transition hover:brightness-95">Continue with Google</button>
         </form>
-        <Link href="/demo" className="rounded-card border border-surface-border px-6 py-3 font-medium transition hover:bg-surface">See a live demo</Link>
+        <Link href="/demo" className="rounded-card border border-white/40 bg-black/30 px-7 py-3.5 text-base font-bold backdrop-blur transition hover:bg-black/50">See a live demo</Link>
       </div>
     </div>
   );
@@ -47,73 +48,78 @@ async function Counters() {
   return (
     <dl className="grid grid-cols-3 gap-3">
       {items.map((i) => (
-        <div key={i.l} className="rounded-card border border-surface-border bg-surface p-3 sm:p-4">
-          <dd className="text-2xl font-bold tabular-nums sm:text-3xl">{i.v.toLocaleString("en-IN")}</dd>
-          <dt className="text-xs text-muted sm:text-sm">{i.l}</dt>
+        <div key={i.l} className="rounded-card border border-white/15 bg-black/40 p-3 backdrop-blur sm:p-4">
+          <dd className="font-display text-4xl leading-none font-extrabold tabular-nums sm:text-5xl">{i.v.toLocaleString("en-IN")}</dd>
+          <dt className="mt-1 text-xs text-muted sm:text-sm">{i.l}</dt>
         </div>
       ))}
     </dl>
   );
 }
 
-// A real, sourced event rendered with the same poster the alerts use. Nothing is made up.
-async function ExampleAlert() {
+// A real, sourced show as the same flipping ticket the app uses. Nothing is made up.
+async function ExampleTicket() {
   await connection();
   const db = getDb();
   const [r] = await db
-    .select({ id: schema.events.id, artist: schema.artists.name, city: schema.events.city })
+    .select({ id: schema.events.id })
     .from(schema.events)
-    .innerJoin(schema.artists, eq(schema.artists.id, schema.events.artistId))
     .where(and(eq(schema.events.isSample, false), ne(schema.events.status, "cancelled"), gte(schema.events.eventDate, todayIST()), gte(schema.events.confidence, 0.9)))
-    .orderBy(desc(schema.events.firstSeenAt), asc(schema.events.eventDate))
+    .orderBy(desc(schema.events.ticketStatus), desc(schema.events.firstSeenAt), asc(schema.events.eventDate))
     .limit(1)
     .catch(() => []);
-  if (!r) return null;
+  const d = r ? await getEventView(db, r.id).catch(() => null) : null;
+  if (!d) return null;
   return (
-    <figure className="space-y-2">
-      <Link href={`/event/${r.id}`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/api/og/event/${r.id}?u=amber`} alt={`Example alert: ${r.artist}${r.city ? ` in ${r.city}` : ""}`} width={1200} height={630} className="w-full rounded-card border border-surface-border" />
-      </Link>
-      <figcaption className="text-xs text-muted">A real alert card from the system, not a mock-up.</figcaption>
+    <figure className="mx-auto w-full max-w-md space-y-2">
+      <EventCard ev={d.view} readOnly auto />
+      <figcaption className="text-center text-xs text-muted">A real show from the system. The card flips between the show, the artist and the tickets.</figcaption>
     </figure>
   );
 }
 
 export default function Landing({ searchParams }: { searchParams: Promise<{ signin?: string }> }) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-12 px-4 py-12 sm:py-20">
-      <section className="flex flex-col gap-5">
-        <p className="text-sm font-medium tracking-widest text-accent uppercase">FrontRow</p>
-        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Be the first to know about a show.</h1>
-        <p className="text-lg text-muted">Tell us the artists you love. FrontRow watches the Indian concert and festival calendar and messages you the moment one of them announces a show in India.</p>
-        <Suspense fallback={<div className="h-12 w-72 animate-pulse rounded-card bg-surface-border" />}>
-          <GoogleButton searchParams={searchParams} />
+    <main>
+      <section className="concert-bg" style={{ ["--concert-img" as string]: "url(/concert/hero.jpg)" }}>
+        <div className="mx-auto flex min-h-[78svh] w-full max-w-5xl flex-col justify-end gap-6 px-4 pt-16 pb-10">
+          <p className="text-xs font-bold tracking-[0.3em] text-accent uppercase">India · live shows · alerts</p>
+          <h1 className="font-display text-[clamp(4.5rem,20vw,13rem)] leading-[0.82] font-black">
+            Front<br />
+            <span className="text-accent">Row</span>
+          </h1>
+          <p className="max-w-lg text-lg text-white/85">Be the first to know about a show. Tell us the artists you love and FrontRow messages you the moment one of them announces a date in India.</p>
+          <Suspense fallback={<div className="h-12 w-72 animate-pulse rounded-card bg-white/10" />}>
+            <Buttons searchParams={searchParams} />
+          </Suspense>
+        </div>
+      </section>
+
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-14 px-4 py-12">
+        <Suspense fallback={<div className="grid grid-cols-3 gap-3">{[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-card bg-surface-border" />)}</div>}>
+          <Counters />
         </Suspense>
-      </section>
 
-      <Suspense fallback={<div className="grid grid-cols-3 gap-3">{[0, 1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-card bg-surface-border" />)}</div>}>
-        <Counters />
-      </Suspense>
+        <section aria-labelledby="how" className="space-y-4">
+          <h2 id="how" className="font-display text-5xl font-black">How it works</h2>
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {STEPS.map((s) => (
+              <li key={s.n} className="ticket-paper relative rounded-md p-4">
+                <span className="font-display text-5xl leading-none font-black">{s.n}</span>
+                <div className="perf my-2" />
+                <h3 className="font-bold">{s.t}</h3>
+                <p className="mt-1 text-sm text-black/70">{s.d}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
 
-      <section aria-labelledby="how" className="space-y-4">
-        <h2 id="how" className="text-xl font-semibold">How it works</h2>
-        <ol className="grid gap-3 sm:grid-cols-3">
-          {STEPS.map((s) => (
-            <li key={s.n} className="rounded-card border border-surface-border bg-surface p-4">
-              <span className="mb-2 flex h-7 w-7 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">{s.n}</span>
-              <h3 className="font-medium">{s.t}</h3>
-              <p className="mt-1 text-sm text-muted">{s.d}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+        <Suspense fallback={<div className="mx-auto h-80 w-full max-w-md animate-pulse rounded-card bg-surface-border" />}>
+          <ExampleTicket />
+        </Suspense>
 
-      <Suspense fallback={<div className="aspect-[1200/630] animate-pulse rounded-card bg-surface-border" />}>
-        <ExampleAlert />
-      </Suspense>
-
-      <footer className="border-t border-surface-border pt-6 text-xs text-muted">FrontRow alerts you. You buy your own tickets. Personal, non-commercial project.</footer>
+        <footer className="border-t border-surface-border pt-6 text-xs text-muted">FrontRow alerts you. You buy your own tickets. Personal, non-commercial project.</footer>
+      </div>
     </main>
   );
 }

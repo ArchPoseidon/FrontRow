@@ -20,9 +20,14 @@ async function Loaded() {
   return (
     <>
       <AppHeader isOwner={!!u.isOwner} name={u.name} image={u.image} />
-      <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        <h1 className="mb-6 text-2xl font-semibold tracking-tight">Your radar</h1>
-        <RadarView {...d} homeCity={u.homeCity ?? "Bengaluru"} />
+      <section className="concert-bg" style={{ ["--concert-img" as string]: "url(/concert/hero.jpg)" }}>
+        <div className="mx-auto w-full max-w-5xl px-4 py-8">
+          <p className="text-xs font-bold tracking-widest text-muted uppercase">{u.homeCity ?? "Bengaluru"} · {d.events.length} shows on your radar</p>
+          <h1 className="font-display text-6xl leading-[0.9] font-black sm:text-7xl">Your radar</h1>
+        </div>
+      </section>
+      <main className="mx-auto w-full max-w-5xl px-4 pt-6 pb-28 sm:pb-12">
+        <RadarView {...d} homeCity={u.homeCity ?? "Bengaluru"} hasArtists={d.artists.length > 0} />
       </main>
     </>
   );

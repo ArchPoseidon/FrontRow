@@ -11,7 +11,7 @@ async function Guard() {
 
 export default function Welcome() {
   return (
-    <main className="min-h-screen">
+    <main className="concert-bg min-h-screen" style={{ ["--concert-img" as string]: "url(/concert/hero.jpg)" }}>
       <Suspense fallback={<div className="mx-auto h-40 w-full max-w-3xl animate-pulse px-4 py-8" />}>
         <Guard />
       </Suspense>
