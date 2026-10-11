@@ -12,6 +12,7 @@ const BY_ROUTE: [string, number][] = [
   ["/shows", 4],
   ["/calendar", 1],
   ["/profile", 2],
+  ["/connections", 2],
   ["/setup", 0],
 ];
 

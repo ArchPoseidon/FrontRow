@@ -20,7 +20,7 @@ function Icon({ d }: { d: string }) {
 
 function useOn() {
   const path = usePathname();
-  return (h: string) => path === h || path.startsWith(`${h}/`) || (h === "/radar" && path.startsWith("/event"));
+  return (h: string) => path === h || path.startsWith(`${h}/`) || (h === "/radar" && path.startsWith("/event")) || (h === "/profile" && path.startsWith("/connections"));
 }
 
 // Inline links on wider screens.

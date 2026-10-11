@@ -77,31 +77,6 @@ export function SettingsForm({ isOwner, embedded }: { isOwner: boolean; embedded
       </section>}
 
       <section className={card}>
-        <h2 className="font-semibold">Alert channels</h2>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="font-medium">Telegram</p>
-            <p className="text-sm text-muted">{link === null ? "Checking…" : link.linked ? "Connected. Alerts arrive in your Telegram chat." : link.configured === false ? "Not set up on this server." : "Not connected."}</p>
-          </div>
-          {link?.linked ? (
-            <button onClick={unlink} className="rounded-card border border-surface-border px-3 py-2 text-sm">Unlink</button>
-          ) : link?.url ? (
-            <a href={link.url} target="_blank" rel="noopener noreferrer" className="rounded-card bg-accent px-3 py-2 text-sm font-medium text-accent-foreground">Connect Telegram</a>
-          ) : null}
-        </div>
-        {!link?.linked && link?.url && <p className="text-xs text-muted">Tap the button, then press Start in Telegram. This page updates by itself.</p>}
-        <div className="border-t border-surface-border pt-3">
-          <label className="flex items-center gap-3 text-sm">
-            <input type="checkbox" checked={s.emailEnabled && s.emailAvailable} disabled={!s.emailAvailable} onChange={(e) => save({ emailEnabled: e.target.checked })} className="h-4 w-4 accent-[var(--accent)]" />
-            <span>
-              Email alerts and daily digest
-              {!s.emailAvailable && <span className="block text-xs text-muted">Email isn&apos;t switched on for this server yet. Telegram is the way to get alerts for now.</span>}
-            </span>
-          </label>
-        </div>
-      </section>
-
-      <section className={card}>
         <h2 className="font-semibold">Cities</h2>
         <label className="block text-sm">
           <span className="text-muted">Home city (loudest alerts)</span>

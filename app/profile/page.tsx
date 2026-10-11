@@ -7,7 +7,9 @@ import { getAlertHistory, getArtistViews } from "@/lib/data/radar";
 import { AppHeader } from "@/components/AppHeader";
 import { ProfileArtists } from "@/components/profile/ProfileArtists";
 import { SettingsForm } from "@/components/settings/SettingsForm";
-import { ConnectSpotifyButton } from "@/components/spotify/ConnectSpotify";
+import { ProfileTabs } from "@/components/profile/ProfileTabs";
+import { getConnections } from "@/lib/data/connections";
+import { EmailMark, GoogleCalendarMark, TelegramMark, Tick } from "@/components/icons/BrandIcons";
 import { SpotifyMark } from "@/components/spotify/SpotifyMark";
 import Link from "next/link";
 
@@ -23,13 +25,11 @@ async function Loaded() {
   const db = getDb();
   const [u] = await db.select().from(schema.users).where(eq(schema.users.id, session.user.id));
   if (!u) redirect("/");
-  const [artists, history, [sp], [acct]] = await Promise.all([
+  const [artists, history, conn] = await Promise.all([
     getArtistViews(db, u.id),
     getAlertHistory(db, u.id, 10),
-    db.select({ broken: schema.spotifyConnections.broken }).from(schema.spotifyConnections).where(eq(schema.spotifyConnections.userId, u.id)),
-    db.select({ scope: schema.accounts.scope }).from(schema.accounts).where(eq(schema.accounts.userId, u.id)),
+    getConnections(db, u),
   ]);
-  const gcal = !!acct?.scope?.includes("calendar");
   const card = "space-y-3 rounded-card border border-surface-border bg-surface p-4";
   return (
     <>
@@ -49,34 +49,26 @@ async function Loaded() {
         </div>
       </section>
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-28 sm:pb-12">
+        <ProfileTabs active="profile" />
+        <Link href="/connections" className={`${card} flex-row flex-wrap items-center justify-between hover:border-accent`} aria-label="Open connections">
+          <div className="flex items-center gap-3">
+            {[
+              { ok: conn.spotify.connected, el: <SpotifyMark size={34} /> },
+              { ok: conn.telegram.connected, el: <TelegramMark size={34} /> },
+              { ok: conn.calendar.connected, el: <GoogleCalendarMark size={34} /> },
+              { ok: conn.email.enabled, el: <EmailMark size={34} /> },
+            ].map((x, i) => (
+              <span key={i} className="relative">
+                {x.el}
+                {x.ok && <Tick className="absolute -right-1 -bottom-1" />}
+              </span>
+            ))}
+          </div>
+          <span className="text-sm font-bold">{[conn.spotify.connected, conn.telegram.connected, conn.calendar.connected, conn.email.enabled].filter(Boolean).length} of 4 connected · Manage →</span>
+        </Link>
         <section className={card} aria-labelledby="my-artists">
           <h2 id="my-artists" className="font-display text-3xl font-extrabold">Your artists</h2>
           <ProfileArtists artists={artists} />
-        </section>
-
-        <section className={card} aria-labelledby="spotify">
-          <h2 id="spotify" className="font-display text-3xl font-extrabold">Spotify</h2>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <SpotifyMark size={32} />
-              <div>
-                <p className="font-medium">{sp ? (sp.broken ? "Connection needs refreshing" : "Connected") : "Not connected"}</p>
-                <p className="text-sm text-muted">Import who you follow and listen to.</p>
-              </div>
-            </div>
-            <ConnectSpotifyButton className="rounded-card border border-surface-border px-4 py-2 text-sm font-bold">{sp ? "Re-import" : "Connect Spotify"}</ConnectSpotifyButton>
-          </div>
-        </section>
-
-        <section className={card} aria-labelledby="gcal">
-          <h2 id="gcal" className="font-display text-3xl font-extrabold">Google Calendar</h2>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-medium">{gcal ? "Connected" : "Not connected"}</p>
-              <p className="text-sm text-muted">{gcal ? "Tap Add to calendar on any show and it lands in your Google Calendar." : "Connect once and Add to calendar puts shows straight into Google Calendar. We can only add events, nothing else."}</p>
-            </div>
-            <a href="/api/gcal/connect?return=/profile" className="rounded-card border border-surface-border px-4 py-2 text-sm font-bold">{gcal ? "Reconnect" : "Connect Google Calendar"}</a>
-          </div>
         </section>
 
         <SettingsForm isOwner={!!u.isOwner} embedded />
