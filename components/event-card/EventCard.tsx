@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { ArtistAvatar } from "@/components/artist/ArtistAvatar";
 import { formatShowTime } from "@/lib/util/ist";
+import { STAGE_LABEL, type Stage } from "@/lib/stage";
 import { Countdown } from "./Countdown";
 import { TierLadder } from "./TierLadder";
 import type { EventView } from "./types";
 
-const BAND = { red: "bg-urgency-red text-white", amber: "bg-urgency-amber text-black", info: "bg-urgency-info text-white" } as const;
+// Colour follows the ticket stage: live red, go-live date announced purple, announced / not live orange.
+const BAND: Record<Stage, string> = { live: "bg-stage-live text-white", soon: "bg-stage-soon text-white", announced: "bg-stage-announced text-black", soldout: "bg-stage-soldout text-white", rumor: "bg-urgency-info text-white" };
+const BORDER: Record<Stage, string> = { live: "border-stage-live", soon: "border-stage-soon", announced: "border-stage-announced", soldout: "border-stage-soldout", rumor: "border-muted" };
 
 function dateParts(d: string | null) {
   if (!d) return { dow: "TBA", day: "?", mon: "" };
@@ -28,11 +31,11 @@ export function EventCard({ ev, size = "compact", onDismiss, readOnly }: { ev: E
   const others = ev.lineup.filter((n) => n.toLowerCase() !== ev.artistName.toLowerCase());
   return (
     <article
-      className={`flex flex-col overflow-hidden rounded-card bg-surface ${rumor ? "border border-dashed border-muted" : "border border-surface-border"} ${full ? "" : "h-full"}`}
+      className={`flex flex-col overflow-hidden rounded-card bg-surface border-2 ${BORDER[ev.stage]} ${rumor ? "border-dashed" : ""} ${full ? "" : "h-full"}`}
       aria-label={`${ev.artistName}${ev.city ? `, ${ev.city}` : ""}`}
     >
-      <div className={`flex flex-wrap items-center justify-between gap-x-3 px-4 py-2 text-sm font-semibold ${BAND[ev.urgency]}`}>
-        <span>{ev.isSample ? "Sample · " : ""}{ev.urgency === "red" ? "Act now" : ev.urgency === "amber" ? "Worth a look" : rumor ? "Rumour" : "FYI"}</span>
+      <div className={`flex flex-wrap items-center justify-between gap-x-3 px-4 py-2 text-sm font-semibold ${BAND[ev.stage]}`}>
+        <span>{ev.isSample ? "Sample · " : ""}{STAGE_LABEL[ev.stage]}</span>
         <span className="font-medium">{ev.reason}</span>
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">

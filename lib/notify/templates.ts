@@ -1,9 +1,9 @@
 import { formatShowTime } from "@/lib/util/ist";
 import { appUrl } from "./email";
-import { URGENCY_EMOJI, headline, reasonLine, showDay, type EventCard, type Urgency } from "./content";
+import { headline, reasonLine, showDay, type EventCard, type Urgency } from "./content";
+import { STAGE_EMOJI, STAGE_HEX } from "@/lib/stage";
 
 const e = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const BAND: Record<Urgency, string> = { red: "#e11d48", amber: "#d97706", info: "#64748b" };
 
 const shell = (inner: string, unsub: string) => `<!doctype html><html><body style="margin:0;background:#f5f5f4;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1917">
 <div style="max-width:560px;margin:0 auto;padding:16px">${inner}
@@ -13,12 +13,12 @@ function card(ev: EventCard, urgency: Urgency, kind: "alert" | "test" = "alert")
   const poster = `${appUrl()}/api/og/event/${ev.id}?u=${urgency}`;
   const reason = reasonLine(ev);
   const btn = ev.ticketUrl
-    ? `<a href="${e(ev.ticketUrl)}" style="display:inline-block;background:${BAND[urgency]};color:#fff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:10px">Get tickets</a>`
+    ? `<a href="${e(ev.ticketUrl)}" style="display:inline-block;background:${STAGE_HEX[ev.stage]};color:#fff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:10px">Get tickets</a>`
     : "";
   return `<div style="background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e7e5e4">
 <img src="${poster}" width="560" alt="${e(ev.artistName)}" style="display:block;width:100%;height:auto">
 <div style="padding:16px 20px">
-<p style="margin:0;font-size:12px;font-weight:700;letter-spacing:.04em;color:${BAND[urgency]}">${URGENCY_EMOJI[urgency]} ${e(headline(ev, kind))}</p>
+<p style="margin:0;font-size:12px;font-weight:700;letter-spacing:.04em;color:${STAGE_HEX[ev.stage]}">${STAGE_EMOJI[ev.stage]} ${e(headline(ev, kind))}</p>
 <h2 style="margin:6px 0 2px;font-size:22px">${e(ev.artistName)}</h2>
 <p style="margin:0;color:#57534e">${e([ev.venue, ev.city].filter(Boolean).join(" · "))}</p>
 <p style="margin:4px 0 0">${e([showDay(ev.date), formatShowTime(ev.time)].filter(Boolean).join(", "))}</p>
@@ -29,7 +29,7 @@ ${reason ? `<p style="margin:8px 0 0;font-weight:600">${e(reason)}</p>` : ""}
 }
 
 export function alertEmail(ev: EventCard, urgency: Urgency, unsub: string, kind: "alert" | "test" = "alert") {
-  const subject = `${URGENCY_EMOJI[urgency]} ${kind === "test" ? "Test: " : ""}${ev.artistName}${ev.city ? ` in ${ev.city}` : ""}, ${showDay(ev.date)}`;
+  const subject = `${STAGE_EMOJI[ev.stage]} ${kind === "test" ? "Test: " : ""}${ev.artistName}${ev.city ? ` in ${ev.city}` : ""}, ${showDay(ev.date)}`;
   const text = [headline(ev, kind), ev.artistName, [ev.venue, ev.city].filter(Boolean).join(" · "), showDay(ev.date), reasonLine(ev) ?? "", ev.ticketUrl ? `Tickets: ${ev.ticketUrl}` : "", `Unsubscribe: ${unsub}`].filter(Boolean).join("\n");
   return { subject, html: shell(card(ev, urgency, kind), unsub), text };
 }
@@ -42,7 +42,7 @@ export function digestEmail(groups: DigestGroup[], unsub: string) {
     .filter((g) => g.items.length)
     .map(
       (g) => `<h3 style="margin:24px 0 8px">${e(g.title)}</h3>` +
-        g.items.map(({ ev, urgency }) => `<div style="background:#fff;border:1px solid #e7e5e4;border-radius:12px;padding:12px 16px;margin:0 0 8px"><p style="margin:0;font-weight:700">${e(ev.artistName)} <span style="color:${BAND[urgency]};font-weight:500">· ${e(reasonLine(ev) ?? "")}</span></p><p style="margin:2px 0 0;color:#57534e">${e([showDay(ev.date), ev.venue, ev.city].filter(Boolean).join(" · "))}</p>${ev.ticketUrl ? `<p style="margin:6px 0 0"><a href="${e(ev.ticketUrl)}">Tickets</a> · <a href="${appUrl()}/api/ics/${ev.id}">Calendar</a></p>` : ""}</div>`).join(""),
+        g.items.map(({ ev, urgency }) => `<div style="background:#fff;border:1px solid #e7e5e4;border-radius:12px;padding:12px 16px;margin:0 0 8px"><p style="margin:0;font-weight:700">${e(ev.artistName)} <span style="color:${STAGE_HEX[ev.stage]};font-weight:500">· ${e(reasonLine(ev) ?? "")}</span></p><p style="margin:2px 0 0;color:#57534e">${e([showDay(ev.date), ev.venue, ev.city].filter(Boolean).join(" · "))}</p>${ev.ticketUrl ? `<p style="margin:6px 0 0"><a href="${e(ev.ticketUrl)}">Tickets</a> · <a href="${appUrl()}/api/ics/${ev.id}">Calendar</a></p>` : ""}</div>`).join(""),
     )
     .join("");
   const text = groups.flatMap((g) => [g.title, ...g.items.map(({ ev }) => `- ${ev.artistName}, ${ev.city ?? ""}, ${showDay(ev.date)}${ev.ticketUrl ? ` ${ev.ticketUrl}` : ""}`)]).join("\n");

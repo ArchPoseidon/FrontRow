@@ -1,15 +1,16 @@
 import { formatShowTime } from "@/lib/util/ist";
 import { esc } from "./telegram";
-import { URGENCY_EMOJI, headline, reasonLine, showDay, type EventCard, type Urgency } from "./content";
+import { headline, reasonLine, showDay, type EventCard, type Urgency } from "./content";
+import { STAGE_EMOJI } from "@/lib/stage";
 
 export function telegramCaption(ev: EventCard, urgency: Urgency, kind: "alert" | "test" = "alert") {
   const when = [showDay(ev.date), formatShowTime(ev.time)].filter(Boolean).join(", ");
   const reason = reasonLine(ev);
   const lines = [
-    `${URGENCY_EMOJI[urgency]} <b>${esc(headline(ev, kind))}</b>`,
+    `${STAGE_EMOJI[ev.stage]} <b>${esc(headline(ev, kind))}</b>`,
     `<b>${esc(ev.artistName)}</b>${ev.venue ? ` · ${esc(ev.venue)}` : ""}`,
     esc(when),
-    reason ? `${/open/i.test(reason) ? "🟢" : "🕒"} ${esc(reason)}` : "",
+    reason ? `${ev.stage === "live" ? "🟢" : "🕒"} ${esc(reason)}` : "",
     ev.platforms.length ? `Sources: ${esc(ev.platforms.slice(0, 4).join(", "))}` : "",
   ];
   return lines.filter(Boolean).join("\n");

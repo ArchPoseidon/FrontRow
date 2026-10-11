@@ -1,20 +1,20 @@
 import { formatShowTime } from "@/lib/util/ist";
 import { ImageResponse } from "next/og";
 import { getDb } from "@/lib/db";
-import { loadEventCard, reasonLine, type Urgency } from "@/lib/notify/content";
+import { loadEventCard, reasonLine } from "@/lib/notify/content";
+import { STAGE_HEX, STAGE_LABEL } from "@/lib/stage";
 
-// Public 1200x630 poster. Shared by Telegram alerts, email and (later) the dashboard card.
-const COLORS: Record<Urgency, string> = { red: "#e11d48", amber: "#f59e0b", info: "#64748b" };
+// Public 1200x630 poster. Shared by Telegram alerts and email. The border and band colour follow the ticket stage:
+// live red, go-live date announced purple, announced / not live orange.
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const u = new URL(req.url).searchParams.get("u");
-  const urgency: Urgency = u === "red" || u === "info" ? u : "amber";
+  void req;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response("Not found", { status: 404 });
   const ev = await loadEventCard(getDb(), id).catch(() => null);
   if (!ev) return new Response("Not found", { status: 404 });
 
-  const color = COLORS[urgency];
+  const color = STAGE_HEX[ev.stage];
   const [y, m, d] = (ev.date ?? "").split("-").map(Number);
   const dt = ev.date ? new Date(Date.UTC(y, m - 1, d)) : null;
   const dow = dt ? new Intl.DateTimeFormat("en-IN", { weekday: "short", timeZone: "UTC" }).format(dt).toUpperCase() : "TBA";
@@ -25,10 +25,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
 
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: "#0c0a09", color: "#fafaf9", fontFamily: "sans-serif" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: color, color: "#fff", padding: "22px 48px", fontSize: 34, fontWeight: 700 }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: "#0c0a09", color: "#fafaf9", fontFamily: "sans-serif", border: `12px solid ${color}` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: color, color: "#fff", padding: "20px 40px", fontSize: 34, fontWeight: 700 }}>
           <span>{`${label}${ev.city ? ` · ${ev.city.toUpperCase()}` : ""}`}</span>
-          <span style={{ fontSize: 28, fontWeight: 500 }}>{reason}</span>
+          <span style={{ fontSize: 28, fontWeight: 500 }}>{reason || STAGE_LABEL[ev.stage]}</span>
         </div>
         <div style={{ display: "flex", flex: 1, padding: "40px 48px", gap: 40, alignItems: "center" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 220, height: 260, borderRadius: 24, background: "#1c1917", border: `3px solid ${color}` }}>

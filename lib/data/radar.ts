@@ -4,6 +4,7 @@ import { computeUrgency } from "@/lib/brain/urgency";
 import { displayCity, normalizeCity } from "@/lib/util/city";
 import { todayIST, formatMonthYear } from "@/lib/util/ist";
 import { ticketLinkOf, visibleSources } from "@/lib/links/display";
+import { isConfirmed, stageOf } from "@/lib/stage";
 import type { AlertView, ArtistView, EventView, TierView } from "@/components/event-card/types";
 
 type EventRow = typeof schema.events.$inferSelect;
@@ -83,6 +84,7 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
       saleOpensAt: e.saleOpensAt?.toISOString() ?? null,
       sources: mySrc.map((s) => ({ url: s.url, platform: s.platform })),
       urgency,
+      stage: stageOf({ status: e.status, saleOpensAt: e.saleOpensAt, tiers: my, confirmed: isConfirmed(e.confidence, distinct.size) }),
       reason,
       countdown,
       inHomeCity: normalizeCity(e.city) === home,
@@ -168,7 +170,7 @@ export async function getEventView(db: Db, id: string, viewer?: { homeCity: stri
     isFestival: !!e.isFestival, isSample: !!e.isSample, confidence: e.confidence, lineup: e.lineup ?? [],
     tiers: my.map((t): TierView => ({ name: t.name, priceInr: t.priceInr, status: t.status as TierView["status"], opensAt: t.opensAt?.toISOString() ?? null, closesAt: t.closesAt?.toISOString() ?? null })),
     saleOpensAt: e.saleOpensAt?.toISOString() ?? null, sources: vis.map((s) => ({ url: s.url, platform: s.platform })),
-    urgency, reason, countdown, inHomeCity: normalizeCity(e.city) === normalizeCity(v.homeCity),
+    urgency, stage: stageOf({ status: e.status, saleOpensAt: e.saleOpensAt, tiers: my, confirmed: isConfirmed(e.confidence, distinct.size) }), reason, countdown, inHomeCity: normalizeCity(e.city) === normalizeCity(v.homeCity),
   };
   return {
     view,

@@ -13,6 +13,10 @@
   --urgency-amber: #f59e0b;
   --urgency-info: #64748b;
   --tier-open: #16a34a;
+  --stage-live: #e11d48; /* tickets on sale */
+  --stage-soon: #8b5cf6; /* confirmed, go-live date announced */
+  --stage-announced: #f59e0b; /* announced, tickets not live */
+  --stage-soldout: #57534e;
   --radius: 0.75rem;
   --space-gutter: 1rem;
 }
@@ -39,6 +43,10 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-stage-live: var(--stage-live);
+  --color-stage-soon: var(--stage-soon);
+  --color-stage-announced: var(--stage-announced);
+  --color-stage-soldout: var(--stage-soldout);
   --color-urgency-red: var(--urgency-red);
   --color-urgency-amber: var(--urgency-amber);
   --color-urgency-info: var(--urgency-info);

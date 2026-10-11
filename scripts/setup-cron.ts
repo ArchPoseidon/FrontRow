@@ -18,7 +18,12 @@ const JOBS: { title: string; path: string; minutes: number[]; hours?: number[] }
 ];
 
 async function api(method: string, path: string, body?: unknown) {
-  const r = await fetch(`https://api.cron-job.org${path}`, { method, headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  let r = await fetch(`https://api.cron-job.org${path}`, { method, headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  // cron-job.org rate-limits job writes: wait and retry.
+  for (let i = 0; r.status === 429 && i < 4; i++) {
+    await new Promise((res) => setTimeout(res, 15_000 * (i + 1)));
+    r = await fetch(`https://api.cron-job.org${path}`, { method, headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  }
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(`${method} ${path} -> ${r.status} ${JSON.stringify(j).slice(0, 160)}`);
   return j as Record<string, unknown>;

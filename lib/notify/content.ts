@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
 import { displayCity } from "@/lib/util/city";
 import { ticketLinkOf, visibleSources } from "@/lib/links/display";
+import { isConfirmed, stageOf, type Stage } from "@/lib/stage";
 
 export type Urgency = "red" | "amber" | "info";
 
@@ -24,6 +25,7 @@ export type EventCard = {
   platforms: string[];
   sourceLinks: { url: string; platform: string | null }[]; // verified, working pages only
   ticketStatus: string | null;
+  stage: Stage;
 };
 
 export async function loadEventCard(db: Db, id: string): Promise<EventCard | null> {
@@ -58,6 +60,7 @@ export async function loadEventCard(db: Db, id: string): Promise<EventCard | nul
     tiers: tiers.map((t) => ({ name: t.name, priceInr: t.priceInr, status: t.status, opensAt: t.opensAt, closesAt: t.closesAt })).sort((x, y) => (x.opensAt?.getTime() ?? 0) - (y.opensAt?.getTime() ?? 0)),
     saleOpensAt: e.saleOpensAt,
     platforms,
+    stage: stageOf({ status: e.status, saleOpensAt: e.saleOpensAt, tiers, confirmed: isConfirmed(e.confidence, new Set(good.map((g) => (g.platform ?? g.url).toLowerCase())).size) }),
     sourceLinks: good.map((s) => ({ url: s.url, platform: s.platform })),
   };
 }

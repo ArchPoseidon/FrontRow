@@ -1,3 +1,5 @@
+import type { Stage } from "@/lib/stage";
+
 export type Urgency = "red" | "amber" | "info";
 
 export type TierView = { name: string; priceInr: number | null; status: "upcoming" | "open" | "sold_out" | "closed" | null; opensAt: string | null; closesAt: string | null };
@@ -23,6 +25,7 @@ export type EventView = {
   saleOpensAt: string | null;
   sources: { url: string; platform: string | null }[];
   urgency: Urgency;
+  stage: Stage; // drives the colour: live red, soon purple, announced orange
   reason: string;
   countdown: { to: string; label: string } | null; // live countdown target
   inHomeCity: boolean;
