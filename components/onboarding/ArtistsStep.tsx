@@ -34,6 +34,8 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [resolving, setResolving] = useState(false);
+  const [spotify, setSpotify] = useState<{ connected: boolean; broken: boolean } | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -47,10 +49,20 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
     }
   }, []);
 
+  const loadSpotify = useCallback(async () => {
+    try {
+      const me = await api<{ spotify: { connected: boolean; broken: boolean } }>("/api/me");
+      setSpotify(me.spotify);
+    } catch {
+      setSpotify({ connected: false, broken: false });
+    }
+  }, []);
+
   useEffect(() => {
     load();
+    loadSpotify();
     if (spotifyFlag === "invite_only") searchRef.current?.focus();
-  }, [load, spotifyFlag]);
+  }, [load, loadSpotify, spotifyFlag]);
 
   // Live Spotify search, debounced 300 ms.
   useEffect(() => {
@@ -115,6 +127,21 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
       setNotice({ tone: "error", text: e instanceof Error ? e.message : "Couldn't read that list" });
     } finally {
       setResolving(false);
+    }
+  };
+
+  const resync = async () => {
+    setSyncing(true);
+    setNotice(null);
+    try {
+      const r = await api<{ followed: number; top: number }>("/api/spotify/sync", { method: "POST" });
+      setNotice({ tone: "ok", text: `Re-imported from Spotify: ${r.followed} followed, ${r.top} top artists.` });
+      await load();
+    } catch (e) {
+      setNotice({ tone: "error", text: e instanceof Error ? e.message : "Couldn't import from Spotify" });
+      loadSpotify();
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -191,9 +218,20 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
       {step === 1 && (
         <>
           <section className="flex flex-col gap-3">
-            <a href="/api/spotify/login" className="flex items-center justify-center rounded-card border border-surface-border bg-surface px-4 py-3 font-medium transition hover:border-accent">
-              Connect Spotify
-            </a>
+            {spotify?.connected && !spotify.broken ? (
+              <div className="flex items-center justify-between gap-3 rounded-card border border-emerald-500/60 bg-surface px-4 py-3">
+                <span className="font-medium">
+                  <span aria-hidden>✓ </span>Spotify connected
+                </span>
+                <button onClick={resync} disabled={syncing} className="text-sm text-muted underline underline-offset-2 hover:text-foreground disabled:opacity-50">
+                  {syncing ? "Importing…" : "Re-import my artists"}
+                </button>
+              </div>
+            ) : (
+              <a href="/api/spotify/login" className="flex items-center justify-center rounded-card border border-surface-border bg-surface px-4 py-3 font-medium transition hover:border-accent">
+                {spotify?.broken ? "Spotify connection lost. Reconnect" : "Connect Spotify"}
+              </a>
+            )}
             <div className="relative">
               <input
                 ref={searchRef}
