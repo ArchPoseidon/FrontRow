@@ -12,3 +12,4 @@
 - Secrets live in `.env.local` (gitignored) and in Vercel env vars; `.env.example` lists names only.
 - shadcn/ui is deferred until the first component that needs it (Phase 1+), to keep Phase 0 minimal.
 - Production URL: https://frontrow-pi-three.vercel.app (Vercel alias, stable). Deployed from CLI for now; GitHub link to be added so pushes to main deploy.
+- Google consent screen stays in Testing mode by the owner's choice (deliberate change from the brief): judges' emails are added as test users in Google Cloud Console (max 100). Unlisted emails see Google's own "access blocked" page; /demo stays public. Switching to Publish later needs no code change.

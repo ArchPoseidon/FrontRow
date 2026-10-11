@@ -25,3 +25,7 @@ Be the first to know about a show. FrontRow watches the Indian concert and festi
 ## Health check
 
 `GET /api/health` returns JSON with database status and real counts.
+
+## Adding a judge (Testing mode)
+
+Google Cloud Console > APIs & Services > OAuth consent screen > Audience > Test users > Add users. Enter their exact Google email and save. It takes effect within a few minutes.
