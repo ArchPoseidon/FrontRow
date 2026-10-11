@@ -77,6 +77,7 @@ export function EventCard({ ev, size = "compact", onDismiss, readOnly }: { ev: E
               Get tickets
             </a>
           )}
+          {!rumor && !ev.ticketUrl && <span className="text-xs text-muted">Ticket page not confirmed yet</span>}
           {ev.date && (
             <a href={`/api/ics/${ev.id}`} aria-label="Add to calendar" title="Add to calendar" className="rounded-card border border-surface-border px-3 py-2 text-sm">
               📅

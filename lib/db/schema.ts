@@ -223,6 +223,10 @@ export const events = pgTable(
     confidence: real("confidence"),
     isFestival: boolean("is_festival").default(false),
     lineup: text("lineup").array(),
+    // 'unchecked' | 'exact' (loaded, specific page, names the artist) | 'ok' (loaded, specific, name not found in text)
+    // | 'generic' (homepage/listing) | 'broken' | 'blocked' (bot wall, could not load) | 'none' (no link found)
+    ticketStatus: text("ticket_status").default("unchecked"),
+    ticketCheckedAt: tstz("ticket_checked_at"),
     dedupeKey: text("dedupe_key").notNull().unique(),
     isSample: boolean("is_sample").default(false),
     firstSeenAt: tstz("first_seen_at").defaultNow(),
@@ -264,6 +268,11 @@ export const eventSources = pgTable(
     rawItemId: uuid("raw_item_id").references(() => rawItems.id, { onDelete: "set null" }),
     url: text("url").notNull(),
     platform: text("platform"),
+    status: text("status").default("unchecked"), // same vocabulary as events.ticket_status
+    httpStatus: integer("http_status"),
+    finalUrl: text("final_url"), // after redirects, tracking params stripped
+    pageTitle: text("page_title"),
+    checkedAt: tstz("checked_at"),
   },
   (t) => [primaryKey({ columns: [t.eventId, t.url] })],
 );

@@ -43,7 +43,7 @@ async function fetchFeed(url: string): Promise<Item[]> {
 }
 
 // Cheap relevance gate before spending a Gemini call: the headline must name a watched artist.
-function mentioned(text: string, watched: Watched[]) {
+export function mentioned(text: string, watched: Watched[]) {
   const n = ` ${normalizeName(text)} `;
   return watched.filter((w) => w.names.some((x) => x.length >= 3 && n.includes(` ${x} `)));
 }

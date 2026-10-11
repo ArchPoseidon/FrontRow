@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { count, desc, eq, gte, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
+import { creditsUsedToday, dailyCap } from "@/lib/firecrawl";
 
 // Public. Phase 0 reports DB reachability and real counts only; per-source
 // status and job runs are added once collectors exist.
@@ -31,6 +32,9 @@ export async function GET() {
       const r = runs.find((x) => jobName(x.job) === job)!;
       return { job, startedAt: r.startedAt, finishedAt: r.finishedAt, itemsIn: r.itemsIn, eventsNew: r.eventsNew, alertsSent: r.alertsSent, errors: r.errors };
     });
+    const firecrawl = { used: await creditsUsedToday(db), cap: dailyCap() };
+    const linkRows = await db.select({ s: schema.events.ticketStatus, n: count() }).from(schema.events).groupBy(schema.events.ticketStatus);
+    const linkCounts = Object.fromEntries(linkRows.map((r) => [r.s ?? "unchecked", r.n]));
     return NextResponse.json({
       ok: true,
       checkedAt: new Date().toISOString(),
@@ -53,7 +57,9 @@ export async function GET() {
       })),
       spotify: ownerSpotify ? { connected: true, broken: !!ownerSpotify.broken } : { connected: false, broken: false },
       jobs,
-      firecrawlCreditsToday: 0,
+      firecrawlCreditsToday: firecrawl.used,
+      firecrawlDailyCap: firecrawl.cap,
+      links: linkCounts,
     });
   } catch (e) {
     return NextResponse.json(

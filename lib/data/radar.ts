@@ -3,6 +3,7 @@ import { schema, type Db } from "@/lib/db";
 import { computeUrgency } from "@/lib/brain/urgency";
 import { displayCity, normalizeCity } from "@/lib/util/city";
 import { todayIST, formatMonthYear } from "@/lib/util/ist";
+import { ticketLinkOf, visibleSources } from "@/lib/links/display";
 import type { AlertView, ArtistView, EventView, TierView } from "@/components/event-card/types";
 
 type EventRow = typeof schema.events.$inferSelect;
@@ -55,9 +56,9 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
   const out: EventView[] = [];
   for (const { e, a, priority } of rows) {
     const my = tiers.filter((t) => t.eventId === e.id).sort((x, y) => (x.opensAt?.getTime() ?? 0) - (y.opensAt?.getTime() ?? 0));
-    const mySrc = srcs.filter((s) => s.eventId === e.id);
+    const mySrc = visibleSources(srcs.filter((s) => s.eventId === e.id));
     const distinct = new Set(mySrc.map((s) => (s.platform ?? new URL(s.url).hostname).toLowerCase()));
-    const urgency = computeUrgency({ ...e, sourceCount: distinct.size, tiers: my }, { homeCity: viewer.homeCity, watchCities: viewer.watchCities, priority });
+    const urgency = computeUrgency({ ...e, ticketUrl: ticketLinkOf(e), sourceCount: distinct.size, tiers: my }, { homeCity: viewer.homeCity, watchCities: viewer.watchCities, priority });
     if (!urgency) continue; // a city this viewer does not watch
     const isDismissed = dis.has(e.id);
     if (isDismissed && !opts.includeDismissed) continue;
@@ -73,7 +74,7 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
       date: e.eventDate,
       time: e.eventTime,
       status: e.status,
-      ticketUrl: e.ticketUrl,
+      ticketUrl: ticketLinkOf(e),
       isFestival: !!e.isFestival,
       isSample: !!e.isSample,
       confidence: e.confidence,
@@ -156,16 +157,17 @@ export async function getEventView(db: Db, id: string, viewer?: { homeCity: stri
       .orderBy(schema.events.eventDate),
   ]);
   const my = [...tiers].sort((x, y) => (x.opensAt?.getTime() ?? 0) - (y.opensAt?.getTime() ?? 0));
-  const distinct = new Set(srcs.map((s) => (s.platform ?? new URL(s.url).hostname).toLowerCase()));
+  const vis = visibleSources(srcs);
+  const distinct = new Set(vis.map((s) => (s.platform ?? new URL(s.url).hostname).toLowerCase()));
   const v = { homeCity: viewer?.homeCity ?? "Bengaluru", watchCities: viewer?.watchCities ?? ["ALL_INDIA"] };
-  const urgency = computeUrgency({ ...e, sourceCount: distinct.size, tiers: my }, { ...v, priority: "follow" }) ?? "info";
+  const urgency = computeUrgency({ ...e, ticketUrl: ticketLinkOf(e), sourceCount: distinct.size, tiers: my }, { ...v, priority: "follow" }) ?? "info";
   const { reason, countdown } = reasonAndCountdown(e, my);
   const view: EventView = {
     id: e.id, artistId: a.id, artistName: a.name, artistImage: a.imageUrl, title: e.title, venue: e.venue,
-    city: e.city ? displayCity(e.city) : null, date: e.eventDate, time: e.eventTime, status: e.status, ticketUrl: e.ticketUrl,
+    city: e.city ? displayCity(e.city) : null, date: e.eventDate, time: e.eventTime, status: e.status, ticketUrl: ticketLinkOf(e),
     isFestival: !!e.isFestival, isSample: !!e.isSample, confidence: e.confidence, lineup: e.lineup ?? [],
     tiers: my.map((t): TierView => ({ name: t.name, priceInr: t.priceInr, status: t.status as TierView["status"], opensAt: t.opensAt?.toISOString() ?? null, closesAt: t.closesAt?.toISOString() ?? null })),
-    saleOpensAt: e.saleOpensAt?.toISOString() ?? null, sources: srcs.map((s) => ({ url: s.url, platform: s.platform })),
+    saleOpensAt: e.saleOpensAt?.toISOString() ?? null, sources: vis.map((s) => ({ url: s.url, platform: s.platform })),
     urgency, reason, countdown, inHomeCity: normalizeCity(e.city) === normalizeCity(v.homeCity),
   };
   return {

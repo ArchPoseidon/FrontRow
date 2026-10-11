@@ -89,6 +89,7 @@ export async function upsertEvent(
         venue: cur.venue ?? e.venue,
         eventTime: cur.eventTime ?? e.time,
         ticketUrl: cur.ticketUrl ?? e.ticket_url,
+        ...(!cur.ticketUrl && e.ticket_url ? { ticketStatus: "unchecked" } : {}),
         platform: cur.platform ?? e.platform,
         saleOpensAt: cur.saleOpensAt ?? saleOpensAt,
         title: cur.title ?? e.event_title,

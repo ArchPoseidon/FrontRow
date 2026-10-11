@@ -7,6 +7,7 @@ import { telegramButtons, telegramCaption } from "./caption";
 import { alertEmail, digestEmail, type DigestGroup } from "./templates";
 import { appUrl, emailConfigured, sendEmail, unsubscribeUrl } from "./email";
 import { normalizeCity } from "@/lib/util/city";
+import { verifyBatch } from "@/lib/brain/process";
 
 export type DispatchStats = { sent: number; failed: number; skipped: number; waitingForEmailSetup: number; errors: string[] };
 
@@ -55,6 +56,8 @@ export async function dispatchAlerts(db: Db, limit = 20, onlyUserId?: string): P
     .innerJoin(schema.users, eq(schema.users.id, schema.alerts.userId))
     .where(inArray(schema.alerts.id, ids))
     .orderBy(asc(schema.alerts.id));
+  // A ticket button must open the exact page: verify any event still unchecked before it goes out.
+  await verifyBatch(db, [...new Set(rows.map((r) => r.a.eventId))], { maxEvents: 6, timeMs: 20_000 });
   const today = todayIST();
   // A burst (first sync, big discovery) must not flood anyone: at most 5 instant alerts per user and channel per run,
   // the rest roll into the next digest.

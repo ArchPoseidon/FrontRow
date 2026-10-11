@@ -2,7 +2,7 @@ import { z } from "zod";
 import { generateJson } from "./gemini";
 import { todayIST } from "@/lib/util/ist";
 
-const Tier = z.object({
+export const Tier = z.object({
   name: z.string(),
   price_inr: z.number().nullable(),
   status: z.enum(["upcoming", "open", "sold_out", "closed"]),
@@ -58,4 +58,29 @@ ${input.content.slice(0, 12000)}
 """`;
   const out = await generateJson(prompt, Extraction);
   return out.events;
+}
+
+const TierPage = z.object({
+  is_event_page: z.boolean(),
+  sold_out: z.boolean(),
+  sale_opens_at: z.string().nullable(),
+  tiers: z.array(Tier),
+});
+
+// Ticket tiers from a ticketing page's text. Only what the page states; empty when it lists none.
+export async function extractTiers(text: string, artist: string) {
+  const prompt = `This is the text of a ticketing page for a live show by "${artist}" in India. Extract the ticket tiers.
+Rules:
+- tiers: one per ticket category/phase the page states (e.g. "Early Bird", "Phase 1", "General", "VIP"), in the order sold. status is "open" only if it can be bought now, "sold_out" if marked sold out/unavailable, "upcoming" if not on sale yet, "closed" if the sale ended.
+- price_inr: the lowest price for that tier in rupees as a number, or null. Never invent prices.
+- opens_at / closes_at: ISO datetimes in IST (+05:30) only if the page states them, else null. Today is ${new Date().toISOString().slice(0, 10)}.
+- sale_opens_at: when general sales start, if stated and still in the future.
+- sold_out: true only when the whole event is sold out.
+- is_event_page: false if this is a homepage, listing or error page.
+- Return no tiers when the page lists none.
+
+"""
+${text.slice(0, 14000)}
+"""`;
+  return generateJson(prompt, TierPage);
 }

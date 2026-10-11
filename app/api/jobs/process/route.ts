@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const run = await startRun(db, "process");
   try {
     const s = await processItems(db, { limit: Number(process.env.PROCESS_BATCH ?? 10), concurrency: 4 });
-    await finishRun(db, run, { itemsIn: s.itemsIn, eventsNew: s.eventsNew, alertsSent: 0, errors: s.errors });
+    await finishRun(db, run, { itemsIn: s.itemsIn, eventsNew: s.eventsNew, alertsSent: 0, firecrawlCredits: s.credits, errors: s.errors });
     return Response.json({ ok: true, ...s, eventIds: undefined });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "failed";

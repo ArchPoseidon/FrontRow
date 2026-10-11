@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
+import { ticketLinkOf, visibleSources } from "@/lib/links/display";
 import { collectArtistNews } from "@/lib/collectors/news";
 import { sweepArtist } from "@/lib/collectors/sweep";
 import { ARTIST_NEWS_SOURCE, SWEEP_SOURCE } from "@/lib/collectors/sources";
@@ -74,11 +75,11 @@ export async function upcomingForUser(db: Db, userId: string, homeCity: string |
     city: e.city ? displayCity(e.city) : null,
     date: e.eventDate,
     status: e.status,
-    ticketUrl: e.ticketUrl,
+    ticketUrl: ticketLinkOf(e),
     isFestival: !!e.isFestival,
     inHomeCity: normalizeCity(e.city) === home,
     confidence: e.confidence,
-    sources: srcs.filter((s) => s.eventId === e.id).map((s) => ({ url: s.url, platform: s.platform })),
+    sources: visibleSources(srcs.filter((s) => s.eventId === e.id)).map((s) => ({ url: s.url, platform: s.platform })),
   }));
 }
 
@@ -114,7 +115,8 @@ export async function buildSummary(db: Db, userId: string, homeCity: string | nu
 }
 
 // The first-run scan: instant match, news and grounded sweep run in parallel, streaming progress as SSE.
-export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelect, emit: Emit) {
+export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelect, emit: Emit): Promise<{ credits: number }> {
+  let credits = 0;
   const mine = await db
     .select({ id: schema.userArtists.artistId, priority: schema.userArtists.priority, checkedAt: schema.artists.lastCheckedAt })
     .from(schema.userArtists)
@@ -127,7 +129,7 @@ export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelec
   emit("log", { step: "all", text: `Checking ${watched.length} artist${watched.length === 1 ? "" : "s"} across news, ticketing and web search…` });
   if (!watched.length) {
     emit("done", await buildSummary(db, user.id, user.homeCity, 0));
-    return;
+    return { credits };
   }
   const announced = new Set<string>();
   const announce = async (eventIds: string[], prefix = "Found") => {
@@ -142,6 +144,9 @@ export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelec
   // Step 1: instant match against what the system already knows.
   const instant = async () => {
     emit("step", { step: "instant", state: "running" });
+    const { verifyBatch } = await import("./process");
+    const pre = await upcomingForUser(db, user.id, user.homeCity);
+    credits += await verifyBatch(db, pre.map((k) => k.eventId), { maxEvents: 6, timeMs: 15_000 });
     const known = await upcomingForUser(db, user.id, user.homeCity);
     await decideForEvents(db, known.map((k) => k.eventId), user.id);
     await announce(known.map((k) => k.eventId), "Already found");
@@ -157,6 +162,7 @@ export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelec
     // New headlines only; the shared hash means headlines other users already pulled are processed by the 5-minute job.
     if (res.itemIds.length) {
       const p = await processItems(db, { ids: res.itemIds.slice(0, 24), limit: 24, concurrency: 5 });
+      credits += p.credits;
       await announce(p.eventIds);
     }
     emit("step", { step: "news", state: res.failedFeeds === res.feeds ? "error" : "done", count: res.newItems });
@@ -178,6 +184,7 @@ export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelec
       emit("log", { step: "sweep", text: r.error ? `Couldn't search the web for ${a.name}` : r.found ? `Web search found shows for ${a.name}, checking details…` : `Web search: nothing announced for ${a.name}` });
       if (r.rawItemId) {
         const p = await processItems(db, { ids: [r.rawItemId], limit: 1, concurrency: 1 });
+        credits += p.credits;
         await announce(p.eventIds);
       }
     });
@@ -194,5 +201,6 @@ export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelec
     emit("log", { step: "all", text: `Couldn't send alerts: ${e instanceof Error ? e.message.slice(0, 80) : "error"}` });
   }
   emit("done", await buildSummary(db, user.id, user.homeCity, deepLater));
+  return { credits };
 }
 

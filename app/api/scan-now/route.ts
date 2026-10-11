@@ -47,6 +47,7 @@ export async function POST(req: Request) {
   return sseResponse(async (emit) => {
     const errors: string[] = [];
     let eventsNew = 0;
+    let credits = 0;
     let alertsSent = 0;
     try {
       const mine = await db
@@ -71,6 +72,7 @@ export async function POST(req: Request) {
       const p = await processItems(db, { ids: news.itemIds.slice(0, 30), limit: 30, concurrency: 5 });
       errors.push(...p.errors);
       eventsNew = p.eventsNew;
+      credits = p.credits;
       if (p.eventIds.length) {
         const known = await upcomingForUser(db, uid, null);
         for (const s of known.filter((k) => p.eventIds.includes(k.eventId))) emit("log", { text: `Matched: ${s.artistName}, ${s.city ?? "city TBA"}, ${formatShowDate(s.date)}` });
@@ -86,7 +88,7 @@ export async function POST(req: Request) {
       emit("log", { text: eventsNew ? `Done: ${eventsNew} new show${eventsNew === 1 ? "" : "s"} found` : "Done: nothing new right now" });
       emit("done", { newEvents: eventsNew, alertsSent });
     } finally {
-      await finishRun(db, run, { eventsNew, alertsSent, errors });
+      await finishRun(db, run, { eventsNew, alertsSent, firecrawlCredits: credits, errors });
     }
   });
 }

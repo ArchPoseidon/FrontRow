@@ -29,3 +29,25 @@ Be the first to know about a show. FrontRow watches the Indian concert and festi
 ## Adding a judge (Testing mode)
 
 Google Cloud Console > APIs & Services > OAuth consent screen > Audience > Test users > Add users. Enter their exact Google email and save. It takes effect within a few minutes.
+
+## Scheduling (cron-job.org), one time
+
+Vercel's free plan only runs daily jobs, so cron-job.org calls the job routes. Only the 8:30 heartbeat uses Vercel's own cron.
+
+**Automatic (recommended):**
+1. Sign up free at https://cron-job.org and log in.
+2. Click your name (top right) > **Settings** > **API** > **Create API key**. Copy it.
+3. Put it in `.env.local` as `CRONJOB_API_KEY=...`, then run `npx tsx scripts/setup-cron.ts`. It creates the six schedules below and is safe to run again.
+
+**By hand:** for each row, click **Create cronjob**, paste the URL, open **Advanced**, set the request method to **POST**, add the header `Authorization` = `Bearer <your CRON_SECRET>`, choose the timezone Asia/Kolkata, and set the schedule.
+
+| Job | URL | When |
+| --- | --- | --- |
+| news | `<APP_URL>/api/jobs/news` | every 15 min |
+| process | `<APP_URL>/api/jobs/process` | every 5 min |
+| dispatch | `<APP_URL>/api/jobs/dispatch` | every 5 min |
+| links | `<APP_URL>/api/jobs/links` | every 10 min |
+| listings | `<APP_URL>/api/jobs/listings` | every 30 min (each page is scraped every 6 h) |
+| sweep | `<APP_URL>/api/jobs/sweep` | every 30 min, 06:00 to 10:00 |
+
+The System pulse on the radar turns each dot green once its job has run. The heartbeat message arrives on Telegram daily at 8:30.

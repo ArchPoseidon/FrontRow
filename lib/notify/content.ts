@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
 import { displayCity } from "@/lib/util/city";
+import { ticketLinkOf, visibleSources } from "@/lib/links/display";
 
 export type Urgency = "red" | "amber" | "info";
 
@@ -21,6 +22,8 @@ export type EventCard = {
   tiers: { name: string; priceInr: number | null; status: string | null; opensAt: Date | null; closesAt: Date | null }[];
   saleOpensAt: Date | null;
   platforms: string[];
+  sourceLinks: { url: string; platform: string | null }[]; // verified, working pages only
+  ticketStatus: string | null;
 };
 
 export async function loadEventCard(db: Db, id: string): Promise<EventCard | null> {
@@ -34,7 +37,8 @@ export async function loadEventCard(db: Db, id: string): Promise<EventCard | nul
     db.select().from(schema.eventTiers).where(eq(schema.eventTiers.eventId, id)),
     db.select().from(schema.eventSources).where(eq(schema.eventSources.eventId, id)),
   ]);
-  const platforms = [...new Set(srcs.map((s) => (s.platform ?? new URL(s.url).hostname.replace(/^www\./, "")).trim()).filter(Boolean))];
+  const good = visibleSources(srcs);
+  const platforms = [...new Set(good.map((s) => (s.platform ?? new URL(s.url).hostname.replace(/^www\./, "")).trim()).filter(Boolean))];
   const { e, a } = row;
   return {
     id: e.id,
@@ -46,13 +50,15 @@ export async function loadEventCard(db: Db, id: string): Promise<EventCard | nul
     date: e.eventDate,
     time: e.eventTime,
     status: e.status,
-    ticketUrl: e.ticketUrl,
+    ticketUrl: ticketLinkOf(e),
+    ticketStatus: e.ticketStatus,
     isFestival: !!e.isFestival,
     isSample: !!e.isSample,
     confidence: e.confidence,
     tiers: tiers.map((t) => ({ name: t.name, priceInr: t.priceInr, status: t.status, opensAt: t.opensAt, closesAt: t.closesAt })).sort((x, y) => (x.opensAt?.getTime() ?? 0) - (y.opensAt?.getTime() ?? 0)),
     saleOpensAt: e.saleOpensAt,
     platforms,
+    sourceLinks: good.map((s) => ({ url: s.url, platform: s.platform })),
   };
 }
 
