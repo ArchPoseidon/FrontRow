@@ -83,10 +83,10 @@ export default function Landing({ searchParams }: { searchParams: Promise<{ sign
     <main>
       <section className="concert-bg" style={{ ["--concert-img" as string]: "url(/concert/hero.jpg)" }}>
         <div className="mx-auto flex min-h-[78svh] w-full max-w-5xl flex-col justify-end gap-6 px-4 pt-16 pb-10">
-          <p className="text-xs font-bold tracking-[0.3em] text-accent uppercase">India · live shows · alerts</p>
+          <p className="text-xs font-bold tracking-[0.3em] text-magenta uppercase">India · live shows · alerts</p>
           <h1 className="font-display text-[clamp(4.5rem,20vw,13rem)] leading-[0.82] font-black">
             Front<br />
-            <span className="text-accent">Row</span>
+            <span className="text-magenta">Row</span>
           </h1>
           <p className="max-w-lg text-lg text-white/85">Be the first to know about a show. Tell us the artists you love and FrontRow messages you the moment one of them announces a date in India.</p>
           <Suspense fallback={<div className="h-12 w-72 animate-pulse rounded-card bg-white/10" />}>

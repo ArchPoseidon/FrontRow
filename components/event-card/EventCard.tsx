@@ -36,6 +36,7 @@ export function EventCard({
   size = "compact",
   onDismiss,
   onMark,
+  onCalendar,
   readOnly,
   auto,
 }: {
@@ -43,6 +44,7 @@ export function EventCard({
   size?: "compact" | "full";
   onDismiss?: (id: string) => void;
   onMark?: (id: string, mark: Mark) => void;
+  onCalendar?: (id: string) => void;
   readOnly?: boolean;
   auto?: boolean;
 }) {
@@ -148,16 +150,20 @@ export function EventCard({
             <button onClick={() => onMark(ev.id, ev.mine === "going" ? null : "going")} aria-pressed={ev.mine === "going"} className={`rounded-card border px-3 py-2 text-sm ${ev.mine === "going" ? "border-[var(--tier-open)] bg-[var(--tier-open)] font-bold text-black" : "border-surface-border"}`}>
               {ev.mine === "going" ? "Going ✓" : "Going"}
             </button>
-            <button onClick={() => onMark(ev.id, ev.mine === "saved" ? null : "saved")} aria-pressed={ev.mine === "saved"} className={`rounded-card border px-3 py-2 text-sm ${ev.mine === "saved" ? "border-foreground font-bold" : "border-surface-border"}`}>
-              {ev.mine === "saved" ? "Saved ✓" : "Save"}
+            <button onClick={() => onMark(ev.id, ev.mine === "saved" ? null : "saved")} aria-pressed={ev.mine === "saved"} aria-label={ev.mine === "saved" ? "Remove bookmark" : "Bookmark this show"} title={ev.mine === "saved" ? "Saved. Tap to remove" : "Bookmark for later"} className={`flex items-center gap-1.5 rounded-card border px-3 py-2 text-sm ${ev.mine === "saved" ? "border-[var(--magenta)] font-bold text-[var(--magenta)]" : "border-surface-border"}`}>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill={ev.mine === "saved" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden><path d="M6 4h12v17l-6-4-6 4z" /></svg>
+              {ev.mine === "saved" ? "Saved" : "Save"}
             </button>
           </>
         )}
-        {ev.date && (
-          <a href={`/api/ics/${ev.id}`} aria-label="Add to calendar" title="Add to calendar" className="rounded-card border border-surface-border px-3 py-2 text-sm">
-            📅
-          </a>
-        )}
+        {ev.date && (!readOnly && onCalendar ? (
+          <button onClick={() => onCalendar(ev.id)} aria-pressed={!!ev.inCalendar} title={ev.inCalendar ? "In your calendar. Tap to remove" : "Add to your calendar"} className={`flex items-center gap-1.5 rounded-card border px-3 py-2 text-sm ${ev.inCalendar ? "border-[var(--tier-open)] font-bold text-[var(--tier-open)]" : "border-surface-border"}`}>
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M4 10h16M9 3v4M15 3v4" />{ev.inCalendar && <path d="M9 15l2 2 4-4" />}</svg>
+            {ev.inCalendar ? "In calendar" : "Add to calendar"}
+          </button>
+        ) : (
+          <a href={`/api/ics/${ev.id}`} aria-label="Download calendar file" title="Download calendar file" className="rounded-card border border-surface-border px-3 py-2 text-sm">📅</a>
+        ))}
         {!readOnly && onDismiss && (
           <button onClick={() => onDismiss(ev.id)} aria-label="Not for me" title="Not for me" className="rounded-card border border-surface-border px-3 py-2 text-sm text-muted">
             ✕

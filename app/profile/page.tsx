@@ -23,11 +23,13 @@ async function Loaded() {
   const db = getDb();
   const [u] = await db.select().from(schema.users).where(eq(schema.users.id, session.user.id));
   if (!u) redirect("/");
-  const [artists, history, [sp]] = await Promise.all([
+  const [artists, history, [sp], [acct]] = await Promise.all([
     getArtistViews(db, u.id),
     getAlertHistory(db, u.id, 10),
     db.select({ broken: schema.spotifyConnections.broken }).from(schema.spotifyConnections).where(eq(schema.spotifyConnections.userId, u.id)),
+    db.select({ scope: schema.accounts.scope }).from(schema.accounts).where(eq(schema.accounts.userId, u.id)),
   ]);
+  const gcal = !!acct?.scope?.includes("calendar");
   const card = "space-y-3 rounded-card border border-surface-border bg-surface p-4";
   return (
     <>
@@ -63,6 +65,17 @@ async function Loaded() {
               </div>
             </div>
             <ConnectSpotifyButton className="rounded-card border border-surface-border px-4 py-2 text-sm font-bold">{sp ? "Re-import" : "Connect Spotify"}</ConnectSpotifyButton>
+          </div>
+        </section>
+
+        <section className={card} aria-labelledby="gcal">
+          <h2 id="gcal" className="font-display text-3xl font-extrabold">Google Calendar</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-medium">{gcal ? "Connected" : "Not connected"}</p>
+              <p className="text-sm text-muted">{gcal ? "Tap Add to calendar on any show and it lands in your Google Calendar." : "Connect once and Add to calendar puts shows straight into Google Calendar. We can only add events, nothing else."}</p>
+            </div>
+            <a href="/api/gcal/connect?return=/profile" className="rounded-card border border-surface-border px-4 py-2 text-sm font-bold">{gcal ? "Reconnect" : "Connect Google Calendar"}</a>
           </div>
         </section>
 

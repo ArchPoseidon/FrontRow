@@ -51,3 +51,12 @@ Vercel's free plan only runs daily jobs, so cron-job.org calls the job routes. O
 | sweep | `<APP_URL>/api/jobs/sweep` | every 30 min, 06:00 to 10:00 |
 
 The System pulse on the radar turns each dot green once its job has run. The heartbeat message arrives on Telegram daily at 8:30.
+
+## Google Calendar (one time)
+
+"Add to calendar" always puts a show in the FrontRow calendar view. To also put it in Google Calendar, the Google project needs the Calendar API:
+1. Open https://console.cloud.google.com and pick the FrontRow project.
+2. Go to **APIs & Services > Library**, search for **Google Calendar API**, and click **Enable**.
+3. Go to **APIs & Services > OAuth consent screen > Data Access** (or **Scopes**), click **Add or remove scopes**, tick `.../auth/calendar.events`, and save.
+4. Nothing else changes: the redirect URI is the same one sign-in already uses. While the app is in Testing mode, only the test users you listed can connect Google Calendar, and Google shows them an "unverified app" screen once (**Continue** to proceed).
+5. In the app, open **Profile > Google Calendar > Connect Google Calendar**, or tap **Add to calendar** on any show.

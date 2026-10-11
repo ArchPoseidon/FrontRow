@@ -319,3 +319,21 @@ export const runs = pgTable("runs", {
   firecrawlCredits: integer("firecrawl_credits"),
   errors: jsonb("errors"),
 });
+
+/* ---------- Calendar entries ---------- */
+
+// Shows a user added to their calendar (the in-app calendar view, and Google Calendar when connected).
+export const calendarEntries = pgTable(
+  "calendar_entries",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    googleEventId: text("google_event_id"),
+    createdAt: tstz("created_at").defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.eventId] })],
+);

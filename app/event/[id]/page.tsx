@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { getDb, schema } from "@/lib/db";
 import { getEventView } from "@/lib/data/radar";
 import { EventCard } from "@/components/event-card/EventCard";
+import { EventCardLive } from "@/components/event-card/EventCardLive";
 
 async function Loaded({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -13,7 +14,7 @@ async function Loaded({ params }: { params: Promise<{ id: string }> }) {
   const db = getDb();
   const session = await auth();
   const [u] = session?.user?.id ? await db.select().from(schema.users).where(eq(schema.users.id, session.user.id)) : [];
-  const d = await getEventView(db, id, u ? { homeCity: u.homeCity, watchCities: u.watchCities } : undefined);
+  const d = await getEventView(db, id, u ? { homeCity: u.homeCity, watchCities: u.watchCities, userId: u.id } : undefined);
   if (!d) notFound();
   const { view: ev } = d;
   const fmt = (iso: string | null) => (iso ? new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso)) : "—");
@@ -21,7 +22,7 @@ async function Loaded({ params }: { params: Promise<{ id: string }> }) {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-6">
       <Link href={u ? "/radar" : "/demo"} className="text-sm text-muted underline underline-offset-2">← Back to the radar</Link>
-      <EventCard ev={ev} size="full" readOnly />
+      {u ? <EventCardLive ev={ev} /> : <EventCard ev={ev} size="full" readOnly />}
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Sources</h2>

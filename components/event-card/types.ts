@@ -31,6 +31,7 @@ export type EventView = {
   inHomeCity: boolean;
   dismissed?: boolean;
   mine?: "going" | "saved" | null; // the viewer's own mark
+  inCalendar?: boolean; // added to the viewer's calendar
   artistGenres?: string[];
 };
 

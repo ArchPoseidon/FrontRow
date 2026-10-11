@@ -15,6 +15,13 @@
       "when": 1791750389668,
       "tag": "0001_link_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791754367874,
+      "tag": "0002_calendar_entries",
+      "breakpoints": true
     }
   ]
 }

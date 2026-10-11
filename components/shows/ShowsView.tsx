@@ -3,26 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 import { EventCard } from "@/components/event-card/EventCard";
+import { ToastView, useEventActions } from "@/components/event-card/useEventActions";
 import type { EventView } from "@/components/event-card/types";
 
 // Going (bought or planning) and Saved (keep an eye on), each a stack of flip tickets.
 export function ShowsView({ events: initial }: { events: EventView[] }) {
-  const [events, setEvents] = useState(initial);
+  const { events, mark, toggleCalendar, toast, clearToast } = useEventActions(initial, { returnTo: "/shows" });
   const [tab, setTab] = useState<"going" | "saved">("going");
-  const [err, setErr] = useState<string | null>(null);
   const going = events.filter((e) => e.mine === "going");
   const saved = events.filter((e) => e.mine === "saved");
   const list = tab === "going" ? going : saved;
-
-  async function mark(id: string, m: "going" | "saved" | null) {
-    const prev = events;
-    setEvents((es) => es.map((e) => (e.id === id ? { ...e, mine: m } : e)));
-    const r = await fetch(`/api/events/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: m ?? "clear" }) }).catch(() => null);
-    if (!r?.ok) {
-      setEvents(prev);
-      setErr("Couldn't save that. Try again.");
-    }
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,7 +24,6 @@ export function ShowsView({ events: initial }: { events: EventView[] }) {
         ))}
         <Link href="/calendar" className="flex-1 rounded-full py-2 text-center text-sm text-muted">Calendar</Link>
       </div>
-      {err && <p role="alert" className="rounded-card border border-urgency-red/60 px-4 py-2 text-sm">{err}</p>}
       {list.length === 0 ? (
         <div className="rounded-card border border-dashed border-surface-border p-10 text-center">
           <p className="font-display text-3xl font-extrabold">{tab === "going" ? "Nothing booked yet" : "Nothing saved yet"}</p>
@@ -47,11 +36,12 @@ export function ShowsView({ events: initial }: { events: EventView[] }) {
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {list.map((e) => (
             <li key={e.id}>
-              <EventCard ev={e} onMark={mark} />
+              <EventCard ev={e} onMark={mark} onCalendar={toggleCalendar} />
             </li>
           ))}
         </ul>
       )}
+      <ToastView toast={toast} onClose={clearToast} />
     </div>
   );
 }

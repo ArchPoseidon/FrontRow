@@ -3,15 +3,16 @@
 /* All look-and-feel lives in these tokens so the UI can be restyled in one file. */
 :root {
   /* Stub: ink-black stage, paper tickets. Every look-and-feel value lives here. */
-  --background: #0c0c0d;
-  --foreground: #f3f0e8;
-  --surface: #171718;
-  --surface-border: #2c2c2f;
-  --muted: #8f8c84;
-  --accent: #efe8d8; /* ticket paper */
+  --background: #0d0911;
+  --foreground: #f6eff8;
+  --surface: #181020;
+  --surface-border: #31233b;
+  --muted: #a093ad;
+  --accent: #f3e4f1; /* ticket paper, a touch of orchid */
   --accent-foreground: #141414;
-  --paper: #efe8d8;
-  --paper-ink: #161616;
+  --paper: #f3e4f1;
+  --paper-ink: #1a1022;
+  --magenta: #e45bd0; /* highlight: links, wordmark, active states */
   --urgency-red: #ff3b5c;
   --urgency-amber: #ffa630;
   --urgency-info: #64748b;
@@ -22,18 +23,18 @@
   --stage-soldout: #57534e;
   --radius: 0.375rem;
   --space-gutter: 1rem;
-  --concert-dim: rgba(8, 8, 10, 0.78); /* overlay that dims the concert photo */
+  --concert-dim: rgba(16, 7, 22, 0.70); /* overlay that dims the concert photo */
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --background: #f4f0e6;
+  --background: #f7eff6;
   --foreground: #161616;
   --surface: #ffffff;
-  --surface-border: #d9d3c3;
+  --surface-border: #dccbd9;
   --muted: #6b675d;
-  --accent: #161616;
-  --accent-foreground: #f4f0e6;
+  --accent: #1a1022;
+  --accent-foreground: #f7eff6;
   color-scheme: light;
 }
 
@@ -44,6 +45,7 @@
   --color-surface-border: var(--surface-border);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-magenta: var(--magenta);
   --color-accent-foreground: var(--accent-foreground);
   --color-stage-live: var(--stage-live);
   --color-stage-soon: var(--stage-soon);
@@ -81,7 +83,7 @@ body {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(180deg, var(--concert-dim) 0%, rgba(12, 12, 13, 0.92) 100%);
+  background: linear-gradient(180deg, var(--concert-dim) 0%, rgba(13, 9, 17, 0.94) 100%);
 }
 .concert-fixed::before, .concert-fixed::after { position: fixed; }
 

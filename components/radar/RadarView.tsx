@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EventCard } from "@/components/event-card/EventCard";
+import { ToastView, useEventActions } from "@/components/event-card/useEventActions";
 import type { EventView } from "@/components/event-card/types";
 import { SystemPulse } from "./SystemPulse";
 
@@ -21,10 +22,9 @@ const monthLabel = (k: string) => (k === "tbd" ? "Date to be announced" : new In
 
 // Shared by the dashboard (editable) and /demo (read-only).
 export function RadarView({ events: initial, homeCity, readOnly, sourceCount, lastScanAt, hasArtists = true }: { events: EventView[]; homeCity: string; readOnly?: boolean; sourceCount: number; lastScanAt: string | null; hasArtists?: boolean }) {
-  const [events, setEvents] = useState(initial);
+  const { events, mark, dismiss, toggleCalendar, toast, clearToast } = useEventActions(initial, { returnTo: "/radar" });
   const [chip, setChip] = useState<Chip>("india");
   const [limit, setLimit] = useState(12);
-  const [err, setErr] = useState<string | null>(null);
 
   const act = events.filter((e) => e.stage === "live").slice(0, 8);
   const filtered = useMemo(() => events.filter((e) => (chip === "home" ? e.inHomeCity : chip === "festivals" ? e.isFestival : chip === "rumors" ? e.status === "rumored" : true)), [events, chip]);
@@ -33,31 +33,6 @@ export function RadarView({ events: initial, homeCity, readOnly, sourceCount, la
     for (const e of filtered.slice(0, limit)) m.set(monthKey(e.date), [...(m.get(monthKey(e.date)) ?? []), e]);
     return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [filtered, limit]);
-
-  async function send(id: string, action: "going" | "saved" | "dismissed" | "clear") {
-    const r = await fetch(`/api/events/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
-    if (!r.ok) throw new Error();
-  }
-  async function dismiss(id: string) {
-    const prev = events;
-    setEvents((es) => es.filter((e) => e.id !== id));
-    try {
-      await send(id, "dismissed");
-    } catch {
-      setEvents(prev);
-      setErr("Couldn't save that. Try again.");
-    }
-  }
-  async function mark(id: string, m: "going" | "saved" | null) {
-    const prev = events;
-    setEvents((es) => es.map((e) => (e.id === id ? { ...e, mine: m } : e)));
-    try {
-      await send(id, m ?? "clear");
-    } catch {
-      setEvents(prev);
-      setErr("Couldn't save that. Try again.");
-    }
-  }
 
   const chips: { k: Chip; label: string; n: number }[] = [
     { k: "home", label: homeCity, n: events.filter((e) => e.inHomeCity).length },
@@ -68,13 +43,6 @@ export function RadarView({ events: initial, homeCity, readOnly, sourceCount, la
 
   return (
     <div className="flex flex-col gap-10">
-      {err && (
-        <p role="alert" className="flex items-center justify-between rounded-card border border-urgency-red/60 px-4 py-3 text-sm">
-          {err}
-          <button onClick={() => setErr(null)} className="underline">Dismiss</button>
-        </p>
-      )}
-
       {!hasArtists ? (
         <section className="rounded-card border border-dashed border-surface-border p-8 text-center">
           <h2 className="font-display text-3xl font-extrabold">No artists yet</h2>
@@ -89,7 +57,7 @@ export function RadarView({ events: initial, homeCity, readOnly, sourceCount, la
               <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
                 {act.map((e, i) => (
                   <li key={e.id} className="w-[min(88vw,24rem)] shrink-0 snap-start">
-                    <EventCard ev={e} onDismiss={dismiss} onMark={mark} readOnly={readOnly} auto={i === 0} />
+                    <EventCard ev={e} onDismiss={dismiss} onMark={mark} onCalendar={toggleCalendar} readOnly={readOnly} auto={i === 0} />
                   </li>
                 ))}
               </ul>
@@ -129,7 +97,7 @@ export function RadarView({ events: initial, homeCity, readOnly, sourceCount, la
                   <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {list.map((e) => (
                       <li key={e.id}>
-                        <EventCard ev={e} onDismiss={dismiss} onMark={mark} readOnly={readOnly} />
+                        <EventCard ev={e} onDismiss={dismiss} onMark={mark} onCalendar={toggleCalendar} readOnly={readOnly} />
                       </li>
                     ))}
                   </ul>
@@ -146,6 +114,7 @@ export function RadarView({ events: initial, homeCity, readOnly, sourceCount, la
       )}
 
       <SystemPulse demo={readOnly} />
+      <ToastView toast={toast} onClose={clearToast} />
     </div>
   );
 }

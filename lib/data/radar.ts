@@ -47,11 +47,13 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
     .where(and(ne(schema.userArtists.priority, "muted"), ne(schema.events.status, "cancelled"), or(isNull(schema.events.eventDate), gte(schema.events.eventDate, today)), eq(schema.events.isSample, false)));
   if (!rows.length) return [];
   const ids = rows.map((r) => r.e.id);
-  const [tiers, srcs, dismissed] = await Promise.all([
+  const [tiers, srcs, dismissed, cal] = await Promise.all([
     db.select().from(schema.eventTiers).where(inArray(schema.eventTiers.eventId, ids)),
     db.select().from(schema.eventSources).where(inArray(schema.eventSources.eventId, ids)),
     db.select({ eventId: schema.alerts.eventId, action: schema.alerts.userAction }).from(schema.alerts).where(and(eq(schema.alerts.userId, viewer.userId), inArray(schema.alerts.userAction, ["dismissed", "going", "saved", "bought"]))),
+    db.select({ eventId: schema.calendarEntries.eventId }).from(schema.calendarEntries).where(eq(schema.calendarEntries.userId, viewer.userId)),
   ]);
+  const inCal = new Set(cal.map((c) => c.eventId));
   const dis = new Set(dismissed.filter((d) => d.action === "dismissed").map((d) => d.eventId));
   // "bought it" in Telegram and "Going" on the dashboard are the same thing.
   const marks = new Map<string, "going" | "saved">();
@@ -94,6 +96,7 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
       inHomeCity: normalizeCity(e.city) === home,
       dismissed: isDismissed,
       mine: marks.get(e.id) ?? null,
+      inCalendar: inCal.has(e.id),
     });
   }
   const rank = { red: 0, amber: 1, info: 2 } as const;
@@ -146,7 +149,7 @@ export async function getPublicCounters(db: Db) {
 }
 
 // One event for the detail page. Public; urgency is shown for the viewer's cities when signed in, else Bengaluru / all India.
-export async function getEventView(db: Db, id: string, viewer?: { homeCity: string | null; watchCities: string[] | null }) {
+export async function getEventView(db: Db, id: string, viewer?: { homeCity: string | null; watchCities: string[] | null; userId?: string }) {
   const [row] = await db
     .select({ e: schema.events, a: schema.artists })
     .from(schema.events)
@@ -169,6 +172,13 @@ export async function getEventView(db: Db, id: string, viewer?: { homeCity: stri
   const v = { homeCity: viewer?.homeCity ?? "Bengaluru", watchCities: viewer?.watchCities ?? ["ALL_INDIA"] };
   const urgency = computeUrgency({ ...e, ticketUrl: ticketLinkOf(e), sourceCount: distinct.size, tiers: my }, { ...v, priority: "follow" }) ?? "info";
   const { reason, countdown } = reasonAndCountdown(e, my);
+  let mine: EventView["mine"] = null;
+  let inCalendar = false;
+  if (viewer?.userId) {
+    const acts = await db.select({ a: schema.alerts.userAction }).from(schema.alerts).where(and(eq(schema.alerts.userId, viewer.userId), eq(schema.alerts.eventId, id)));
+    mine = acts.some((x) => x.a === "going" || x.a === "bought") ? "going" : acts.some((x) => x.a === "saved") ? "saved" : null;
+    inCalendar = (await db.select().from(schema.calendarEntries).where(and(eq(schema.calendarEntries.userId, viewer.userId), eq(schema.calendarEntries.eventId, id)))).length > 0;
+  }
   const view: EventView = {
     id: e.id, artistId: a.id, artistName: a.name, artistImage: a.imageUrl, title: e.title, venue: e.venue,
     city: e.city ? displayCity(e.city) : null, date: e.eventDate, time: e.eventTime, status: e.status, ticketUrl: ticketLinkOf(e),
@@ -176,6 +186,7 @@ export async function getEventView(db: Db, id: string, viewer?: { homeCity: stri
     tiers: my.map((t): TierView => ({ name: t.name, priceInr: t.priceInr, status: t.status as TierView["status"], opensAt: t.opensAt?.toISOString() ?? null, closesAt: t.closesAt?.toISOString() ?? null })),
     saleOpensAt: e.saleOpensAt?.toISOString() ?? null, sources: vis.map((s) => ({ url: s.url, platform: s.platform })),
     urgency, stage: stageOf({ status: e.status, saleOpensAt: e.saleOpensAt, tiers: my, confirmed: isConfirmed(e.confidence, distinct.size) }), reason, countdown, inHomeCity: normalizeCity(e.city) === normalizeCity(v.homeCity),
+    mine, inCalendar,
   };
   return {
     view,

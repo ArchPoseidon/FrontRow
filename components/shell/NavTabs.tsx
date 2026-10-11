@@ -29,7 +29,7 @@ export function DesktopNav() {
   return (
       <nav aria-label="Main" className="hidden items-center gap-5 text-sm sm:flex">
         {TABS.map((t) => (
-          <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={on(t.href) ? "font-bold text-foreground" : "text-muted hover:text-foreground"}>
+          <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={on(t.href) ? "font-bold text-magenta" : "text-muted hover:text-foreground"}>
             {t.label}
           </Link>
         ))}
@@ -43,7 +43,7 @@ export function BottomBar() {
   return (
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-surface-border bg-background/95 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
         {TABS.map((t) => (
-          <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={`flex flex-col items-center gap-0.5 px-3 text-[11px] ${on(t.href) ? "font-bold text-foreground" : "text-muted"}`}>
+          <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={`flex flex-col items-center gap-0.5 px-3 text-[11px] ${on(t.href) ? "font-bold text-magenta" : "text-muted"}`}>
             <Icon d={t.d} />
             {t.label}
           </Link>
