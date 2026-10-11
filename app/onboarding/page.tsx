@@ -1,0 +1,26 @@
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { auth } from "@/auth";
+import { getDb, schema } from "@/lib/db";
+import { ArtistsStep } from "@/components/onboarding/ArtistsStep";
+
+type SearchParams = Promise<{ spotify?: string }>;
+
+async function Loaded({ searchParams }: { searchParams: SearchParams }) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/");
+  const { spotify } = await searchParams;
+  const [u] = await getDb().select({ step: schema.users.onboardingStep }).from(schema.users).where(eq(schema.users.id, session.user.id));
+  return <ArtistsStep initialStep={u?.step ?? 0} spotifyFlag={spotify} />;
+}
+
+export default function Onboarding({ searchParams }: { searchParams: SearchParams }) {
+  return (
+    <main className="min-h-screen">
+      <Suspense fallback={<div className="mx-auto h-40 w-full max-w-3xl animate-pulse px-4 py-8" />}>
+        <Loaded searchParams={searchParams} />
+      </Suspense>
+    </main>
+  );
+}

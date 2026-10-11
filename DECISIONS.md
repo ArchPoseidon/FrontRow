@@ -13,3 +13,11 @@
 - shadcn/ui is deferred until the first component that needs it (Phase 1+), to keep Phase 0 minimal.
 - Production URL: https://frontrow-pi-three.vercel.app (Vercel alias, stable). Deployed from CLI for now; GitHub link to be added so pushes to main deploy.
 - Google consent screen stays in Testing mode by the owner's choice (deliberate change from the brief): judges' emails are added as test users in Google Cloud Console (max 100). Unlisted emails see Google's own "access blocked" page; /demo stays public. Switching to Publish later needs no code change.
+- Phase 1: verified live APIs first. Gemini key works (sent as `x-goog-api-key`); newest stable Flash is `gemini-3.8-flash` (set as `GEMINI_MODEL`). Spotify search returns 10 results with photos and genres. MusicBrainz works with the User-Agent.
+- Spotify search and artist lookup use the app's client-credentials token, not the owner's refresh token, so identity resolution keeps working even if the owner's personal connection breaks. The per-user connection (owner and allowlisted users) is used only for the followed/top import. Deviation from the brief's "owner token for search", for robustness.
+- Spotify's redirect URI must use `127.0.0.1`, not `localhost`, so the Spotify connect flow is tested on the production URL (the Google sign-in cookie is on `localhost` locally).
+- Resolution rules: auto-accept only when exactly one result matches the normalized name exactly; two exact matches (e.g. duplicate Spotify profiles for the same name) go to the "Which one?" tray. Nothing at all in Spotify or MusicBrainz becomes `unverified` ("Name only").
+- `needs_review` is represented by open `artist_candidates` rows, not artist rows, so nothing unconfirmed is watched or matched.
+- Alias enrichment (MusicBrainz aliases, origin, mbid) is best effort in `after()` with a 40s budget, because MusicBrainz answered at 2-3s per call. Artists beyond the budget keep derived aliases (leading "The", "&"/"and") and are enriched on a later pass.
+- A MusicBrainz match by name alone is accepted only if it is a single perfect-score exact-name hit; otherwise the mbid comes from the Spotify URL relation or is left empty.
+- First sign-in with `onboarding_step = 0` is redirected from `/radar` to `/onboarding`. Onboarding steps 1 and 2 are built; cities and alerts steps come in later phases.

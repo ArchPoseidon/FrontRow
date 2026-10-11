@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { count, gte, sql } from "drizzle-orm";
+import { count, eq, gte, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 
 // Public. Phase 0 reports DB reachability and real counts only; per-source
@@ -10,6 +10,12 @@ export async function GET() {
     const db = getDb();
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     await db.execute(sql`select 1`);
+    const [ownerSpotify] = await db
+      .select({ broken: schema.spotifyConnections.broken, expiresAt: schema.spotifyConnections.expiresAt })
+      .from(schema.spotifyConnections)
+      .innerJoin(schema.users, eq(schema.users.id, schema.spotifyConnections.userId))
+      .where(eq(schema.users.isOwner, true))
+      .limit(1);
     const [[users], [artists], [events24h], [alerts24h], sources] = await Promise.all([
       db.select({ n: count() }).from(schema.users),
       db.select({ n: count() }).from(schema.artists),
@@ -35,6 +41,7 @@ export async function GET() {
         lastOkAt: s.lastOkAt,
         lastError: s.lastError,
       })),
+      spotify: ownerSpotify ? { connected: true, broken: !!ownerSpotify.broken } : { connected: false, broken: false },
       jobs: [],
       firecrawlCreditsToday: 0,
     });
