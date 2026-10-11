@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArtistAvatar } from "@/components/artist/ArtistAvatar";
 import { NEXT_PRIORITY, PRIORITY_LABEL, type Candidate, type MyArtist, type Priority, type ReviewItem } from "@/components/artist/types";
 import { ReviewTray } from "./ReviewTray";
+import { TouringNow } from "./TouringNow";
 
 type Notice = { tone: "info" | "error" | "ok"; text: string } | null;
 
@@ -217,6 +218,7 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
 
       {step === 1 && (
         <>
+          <TouringNow onAdded={load} />
           <section className="flex flex-col gap-3">
             {spotify?.connected && !spotify.broken ? (
               <div className="flex items-center justify-between gap-3 rounded-card border border-emerald-500/60 bg-surface px-4 py-3">
@@ -344,11 +346,17 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
           </button>
         ) : (
           <div className="flex flex-col items-end gap-1">
-            <button disabled={review.length > 0 || count === 0} className="rounded-card bg-accent px-5 py-2.5 font-medium text-accent-foreground disabled:opacity-50">
-              Continue
+            <button
+              onClick={() => {
+                window.location.href = "/welcome";
+              }}
+              disabled={review.length > 0 || count === 0}
+              className="rounded-card bg-accent px-5 py-2.5 font-medium text-accent-foreground disabled:opacity-50"
+            >
+              Find my shows
             </button>
             {review.length > 0 && <p className="text-xs text-muted">Resolve or remove the {review.length} unconfirmed first.</p>}
-            {review.length === 0 && count > 0 && <p className="text-xs text-muted">Cities and alerts steps arrive in a later phase.</p>}
+            {review.length === 0 && count > 0 && <p className="text-xs text-muted">We'll check news and the web for every artist, then show what we find.</p>}
           </div>
         )}
       </footer>

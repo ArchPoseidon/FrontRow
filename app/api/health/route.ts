@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { count, eq, gte, sql } from "drizzle-orm";
+import { count, desc, eq, gte, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 
 // Public. Phase 0 reports DB reachability and real counts only; per-source
@@ -16,13 +16,19 @@ export async function GET() {
       .innerJoin(schema.users, eq(schema.users.id, schema.spotifyConnections.userId))
       .where(eq(schema.users.isOwner, true))
       .limit(1);
-    const [[users], [artists], [events24h], [alerts24h], sources] = await Promise.all([
+    const [[users], [artists], [events24h], [alerts24h], sources, runs] = await Promise.all([
       db.select({ n: count() }).from(schema.users),
       db.select({ n: count() }).from(schema.artists),
       db.select({ n: count() }).from(schema.events).where(gte(schema.events.firstSeenAt, since)),
       db.select({ n: count() }).from(schema.alerts).where(gte(schema.alerts.sentAt, since)),
       db.select().from(schema.sources),
+      db.select().from(schema.runs).orderBy(desc(schema.runs.startedAt)).limit(60),
     ]);
+    // Last run per job: real rows only, empty until a job has run.
+    const jobs = [...new Set(runs.map((r) => r.job))].map((job) => {
+      const r = runs.find((x) => x.job === job)!;
+      return { job, startedAt: r.startedAt, finishedAt: r.finishedAt, itemsIn: r.itemsIn, eventsNew: r.eventsNew, alertsSent: r.alertsSent, errors: r.errors };
+    });
     return NextResponse.json({
       ok: true,
       checkedAt: new Date().toISOString(),
@@ -42,7 +48,7 @@ export async function GET() {
         lastError: s.lastError,
       })),
       spotify: ownerSpotify ? { connected: true, broken: !!ownerSpotify.broken } : { connected: false, broken: false },
-      jobs: [],
+      jobs,
       firecrawlCreditsToday: 0,
     });
   } catch (e) {
