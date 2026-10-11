@@ -1,0 +1,47 @@
+import { NextResponse } from "next/server";
+import { count, gte, sql } from "drizzle-orm";
+import { getDb, schema } from "@/lib/db";
+
+// Public. Phase 0 reports DB reachability and real counts only; per-source
+// status and job runs are added once collectors exist.
+export async function GET() {
+  const started = Date.now();
+  try {
+    const db = getDb();
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await db.execute(sql`select 1`);
+    const [[users], [artists], [events24h], [alerts24h], sources] = await Promise.all([
+      db.select({ n: count() }).from(schema.users),
+      db.select({ n: count() }).from(schema.artists),
+      db.select({ n: count() }).from(schema.events).where(gte(schema.events.firstSeenAt, since)),
+      db.select({ n: count() }).from(schema.alerts).where(gte(schema.alerts.sentAt, since)),
+      db.select().from(schema.sources),
+    ]);
+    return NextResponse.json({
+      ok: true,
+      checkedAt: new Date().toISOString(),
+      dbLatencyMs: Date.now() - started,
+      counts: {
+        users: users.n,
+        artists: artists.n,
+        eventsLast24h: events24h.n,
+        alertsLast24h: alerts24h.n,
+      },
+      sources: sources.map((s) => ({
+        name: s.name,
+        kind: s.kind,
+        enabled: s.enabled,
+        lastRunAt: s.lastRunAt,
+        lastOkAt: s.lastOkAt,
+        lastError: s.lastError,
+      })),
+      jobs: [],
+      firecrawlCreditsToday: 0,
+    });
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "unknown error" },
+      { status: 503 },
+    );
+  }
+}

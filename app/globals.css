@@ -1,26 +1,53 @@
 @import "tailwindcss";
 
+/* All look-and-feel lives in these tokens so the UI can be restyled in one file. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf9;
+  --foreground: #1c1917;
+  --surface: #ffffff;
+  --surface-border: #e7e5e4;
+  --muted: #78716c;
+  --accent: #e11d48;
+  --accent-foreground: #ffffff;
+  --urgency-red: #e11d48;
+  --urgency-amber: #f59e0b;
+  --urgency-info: #64748b;
+  --radius: 0.75rem;
+  --space-gutter: 1rem;
+}
+
+:root[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  color-scheme: dark;
+}
+
+/* Dark by default; light supported via data-theme="light". */
+:root:not([data-theme="light"]) {
+  --background: #0c0a09;
+  --foreground: #fafaf9;
+  --surface: #1c1917;
+  --surface-border: #292524;
+  --muted: #a8a29e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-border: var(--surface-border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-urgency-red: var(--urgency-red);
+  --color-urgency-amber: var(--urgency-amber);
+  --color-urgency-info: var(--urgency-info);
+  --radius-card: var(--radius);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
