@@ -11,8 +11,8 @@ async function Loaded({ searchParams }: { searchParams: SearchParams }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
   const { spotify } = await searchParams;
-  const [u] = await getDb().select({ step: schema.users.onboardingStep }).from(schema.users).where(eq(schema.users.id, session.user.id));
-  return <ArtistsStep initialStep={u?.step ?? 0} spotifyFlag={spotify} />;
+  const [u] = await getDb().select({ step: schema.users.onboardingStep, done: schema.users.onboardedAt }).from(schema.users).where(eq(schema.users.id, session.user.id));
+  return <ArtistsStep initialStep={u?.done ? 2 : (u?.step ?? 0)} spotifyFlag={spotify} />;
 }
 
 export default function Onboarding({ searchParams }: { searchParams: SearchParams }) {

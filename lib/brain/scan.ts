@@ -6,6 +6,7 @@ import { ARTIST_NEWS_SOURCE, SWEEP_SOURCE } from "@/lib/collectors/sources";
 import { loadWatched } from "./match";
 import { processItems, refreshArtistCounts } from "./process";
 import { decideForEvents } from "./decide";
+import { dispatchAlerts } from "@/lib/notify/dispatch";
 import { displayCity, normalizeCity } from "@/lib/util/city";
 import { formatMonthYear, formatShowDate, todayIST } from "@/lib/util/ist";
 import { mapLimit } from "@/lib/util/retry";
@@ -188,6 +189,13 @@ export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelec
   // Alerts for everything this user now has (idempotent; dispatch sends them in Phase 3).
   const all = await upcomingForUser(db, user.id, user.homeCity);
   await decideForEvents(db, all.map((s) => s.eventId), user.id);
+  // Matching alerts go out at the same moment, so the phone buzzes during onboarding.
+  try {
+    const d = await dispatchAlerts(db, 20, user.id);
+    if (d.sent) emit("log", { step: "all", text: `Alert${d.sent === 1 ? "" : "s"} sent: ${d.sent}` });
+  } catch (e) {
+    emit("log", { step: "all", text: `Couldn't send alerts: ${e instanceof Error ? e.message.slice(0, 80) : "error"}` });
+  }
   emit("done", await buildSummary(db, user.id, user.homeCity, deepLater));
 }
 

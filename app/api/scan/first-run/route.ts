@@ -14,6 +14,6 @@ export async function POST() {
   return sseResponse(async (emit) => {
     await runFirstScan(db, user, emit);
     // Mark onboarding as finished once the user has seen their first results.
-    await db.update(schema.users).set({ onboardedAt: user.onboardedAt ?? new Date(), onboardingStep: 4 }).where(eq(schema.users.id, user.id));
+    await db.update(schema.users).set({ onboardedAt: user.onboardedAt ?? new Date() }).where(eq(schema.users.id, user.id));
   });
 }

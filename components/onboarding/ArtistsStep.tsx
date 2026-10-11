@@ -5,6 +5,8 @@ import { ArtistAvatar } from "@/components/artist/ArtistAvatar";
 import { NEXT_PRIORITY, PRIORITY_LABEL, type Candidate, type MyArtist, type Priority, type ReviewItem } from "@/components/artist/types";
 import { ReviewTray } from "./ReviewTray";
 import { TouringNow } from "./TouringNow";
+import { CitiesStep } from "./CitiesStep";
+import { AlertsStep } from "./AlertsStep";
 
 type Notice = { tone: "info" | "error" | "ok"; text: string } | null;
 
@@ -23,7 +25,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number; spotifyFlag?: string }) {
-  const [step, setStep] = useState(initialStep >= 2 ? 2 : 1);
+  const [step, setStep] = useState(Math.min(Math.max(initialStep, 1), 4));
   const [artists, setArtists] = useState<MyArtist[] | null>(null);
   const [review, setReview] = useState<ReviewItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -186,13 +188,13 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
       <header className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">{step === 1 ? "Who do you want to catch live?" : "Confirm your artists"}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{["", "Who do you want to catch live?", "Confirm your artists", "Where should we watch?", "How should we alert you?"][step]}</h1>
           <span className="text-sm text-muted">Step {step} of 4</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-surface-border" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={4}>
           <div className="h-full bg-accent transition-all" style={{ width: `${(step / 4) * 100}%` }} />
         </div>
-        <p className="text-sm text-muted" aria-live="polite">
+        <p className="text-sm text-muted" aria-live="polite" hidden={step > 2}>
           {artists === null ? "Loading your artists…" : `${count} artist${count === 1 ? "" : "s"} added${mustSee ? ` · ${mustSee} must-see` : ""}`}
         </p>
       </header>
@@ -209,6 +211,8 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
         </p>
       )}
 
+      {step <= 2 && (
+        <>
       <ReviewTray
         items={review}
         onPick={(item, c) => confirm(item, { pick: { spotifyId: c.spotifyId, mbid: c.mbid } })}
@@ -346,20 +350,17 @@ export function ArtistsStep({ initialStep, spotifyFlag }: { initialStep: number;
           </button>
         ) : (
           <div className="flex flex-col items-end gap-1">
-            <button
-              onClick={() => {
-                window.location.href = "/welcome";
-              }}
-              disabled={review.length > 0 || count === 0}
-              className="rounded-card bg-accent px-5 py-2.5 font-medium text-accent-foreground disabled:opacity-50"
-            >
-              Find my shows
+            <button onClick={() => saveStep(3)} disabled={review.length > 0 || count === 0} className="rounded-card bg-accent px-5 py-2.5 font-medium text-accent-foreground disabled:opacity-50">
+              Next: cities
             </button>
             {review.length > 0 && <p className="text-xs text-muted">Resolve or remove the {review.length} unconfirmed first.</p>}
-            {review.length === 0 && count > 0 && <p className="text-xs text-muted">We'll check news and the web for every artist, then show what we find.</p>}
           </div>
         )}
       </footer>
+        </>
+      )}
+      {step === 3 && <CitiesStep onBack={() => saveStep(2)} onNext={() => saveStep(4)} />}
+      {step === 4 && <AlertsStep onBack={() => saveStep(3)} />}
     </div>
   );
 }

@@ -26,3 +26,9 @@ export function formatMonthYear(date: string | null): string {
   const [y, m, d] = date.split("-").map(Number);
   return new Intl.DateTimeFormat("en-IN", { timeZone: "UTC", month: "short", year: "numeric" }).format(new Date(Date.UTC(y, m - 1, d || 1)));
 }
+
+// YYYY-MM-DD for `days` days after today (IST).
+export function addDays(days: number, now = new Date()): string {
+  const [y, m, d] = todayIST(now).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
