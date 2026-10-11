@@ -30,3 +30,11 @@
 - First-run scan: artists swept in the last 12 hours are not swept again (shared cache across users); up to 8 are swept, must-see first, and the rest are reported as "Deep check runs tonight".
 - First-run finishes onboarding (`onboarded_at`, step 4) for now; the Cities and Alerts steps are inserted before it in Phase 3. `/welcome` is reached from "Find my shows" on the confirm step.
 - Owner radar seeding (`scripts/seed-owner-radar.ts`): a grounded Gemini query finds artists with announced India shows, they are resolved through Spotify and set to must-see on the owner's list, then swept and processed. Everything stored carries real source URLs.
+- Phase 3: Telegram bot is @FrontRowShowBot (username saved in env). Webhook registered with `scripts/set-webhook.ts`; every call checks `X-Telegram-Bot-Api-Secret-Token`, and the route always answers 200 so a bad update is never retried forever.
+- Email templates are plain HTML strings, not React Email: one fewer dependency, same output. Unsubscribe links are HMAC-signed (AUTH_SECRET) and also work as one-click POST.
+- Dispatch claims rows atomically (`for update skip locked`), so overlapping runs never double-send. At most 5 instant alerts per user and channel per run; the rest roll into the next digest (a first sync must not flood anyone).
+- Telegram "blocked the bot" unlinks the chat and re-queues that alert by email. A failed poster image falls back to a text message with the same buttons.
+- Alerts for events dated in the past are skipped, never sent. Email alerts stay `pending` (and are shown as waiting) until email credentials exist.
+- The digest records one `digest` alert row per (user, event), so no event is in two digests; info alerts are included whatever their age.
+- Test alert uses the nearest real event (home city first), labelled Test. Only with none, a stored `is_sample` event is used, labelled Sample.
+- Onboarding steps 3 (cities) and 4 (alerts) are built; "Find my shows" on step 4 goes to /welcome. Existing onboarded users reopening /onboarding land on step 2.
