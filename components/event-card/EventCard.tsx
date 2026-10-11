@@ -89,6 +89,10 @@ export function EventCard({
               <h3 className="font-display truncate text-3xl leading-none font-extrabold">{ev.artistName}</h3>
               <p className="mt-1 truncate text-sm text-white/80">{[ev.venue, formatShowTime(ev.time)].filter(Boolean).join(" · ") || "Venue to be announced"}</p>
             </div>
+            {/* The artist's picture (the Spotify photo we pulled), always visible on the front */}
+            <div className="h-[76px] w-[76px] shrink-0 overflow-hidden rounded-md border border-white/20">
+              <ArtistPhoto name={ev.artistName} imageUrl={ev.artistImage} rounded={false} />
+            </div>
           </div>
           <div className="space-y-2">
             {ev.countdown && <Countdown to={ev.countdown.to} label={ev.countdown.label} />}
