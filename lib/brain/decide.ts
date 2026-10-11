@@ -1,5 +1,6 @@
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
+import { emailConfigured } from "@/lib/notify/email";
 import { computeUrgency, type Urgency } from "./urgency";
 
 const RANK = { info: 0, amber: 1, red: 2 } as const;
@@ -37,7 +38,7 @@ export async function decideForEvents(db: Db, eventIds: string[], onlyUserId?: s
       if (!urgency) continue;
       const channels: ("telegram" | "email")[] = [];
       const tg = !!w.user.telegramChatId && w.user.telegramEnabled !== false;
-      const em = w.user.emailEnabled !== false;
+      const em = w.user.emailEnabled !== false && emailConfigured(); // no email channel until credentials exist
       if (urgency === "info") {
         if (em) channels.push("email"); // digest only
       } else {

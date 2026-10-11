@@ -66,7 +66,8 @@ export async function dispatchAlerts(db: Db, limit = 20, onlyUserId?: string): P
     const n = (perUser.get(bucket) ?? 0) + 1;
     perUser.set(bucket, n);
     if (n > Number(process.env.INSTANT_ALERT_CAP ?? 5)) {
-      await set({ status: "digest_pending" });
+      // Telegram bursts trickle out on the next runs; email overflow rolls into the digest.
+      await set({ status: a.channel === "telegram" ? "pending" : "digest_pending" });
       stats.skipped++;
       continue;
     }
