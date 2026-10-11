@@ -12,7 +12,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 type Filter = "all" | "added" | "going" | "saved";
 const FILTERS: { k: Filter; label: string }[] = [
   { k: "all", label: "All shows" },
-  { k: "added", label: "In my calendar" },
+  { k: "added", label: "In calendar" },
   { k: "going", label: "Going" },
   { k: "saved", label: "Saved" },
 ];
@@ -84,10 +84,10 @@ export function CalendarView({ events: initial, today }: { events: EventView[]; 
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Which shows to show">
+      <div className="grid grid-cols-2 gap-1 rounded-card border border-surface-border bg-surface/80 p-1.5 backdrop-blur sm:grid-cols-4" role="group" aria-label="Which shows to show">
         {FILTERS.map((f) => (
-          <button key={f.k} onClick={() => { setFilter(f.k); setSel(null); }} aria-pressed={filter === f.k} className={`rounded-full border px-3 py-1.5 text-sm ${filter === f.k ? "border-accent bg-accent font-bold text-accent-foreground" : "border-surface-border"}`}>
-            {f.label} <span className="opacity-70">{counts[f.k]}</span>
+          <button key={f.k} onClick={() => { setFilter(f.k); setSel(null); }} aria-pressed={filter === f.k} className={`font-display rounded-md px-2 py-3.5 text-xl leading-none font-extrabold sm:text-2xl ${filter === f.k ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}>
+            {f.label} <span className="ml-1 text-base font-bold opacity-70">{counts[f.k]}</span>
           </button>
         ))}
       </div>
