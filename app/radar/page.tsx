@@ -1,44 +1,37 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
 import { getDb, schema } from "@/lib/db";
+import { loadRadarPage } from "@/lib/data/page";
+import { RadarView } from "@/components/radar/RadarView";
+import { AppHeader } from "@/components/AppHeader";
+import { RadarSkeleton } from "@/components/radar/RadarSkeleton";
 
-async function Greeting() {
+async function Loaded() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
-  const [u] = await getDb().select().from(schema.users).where(eq(schema.users.id, session.user.id));
+  const db = getDb();
+  const [u] = await db.select().from(schema.users).where(eq(schema.users.id, session.user.id));
+  if (!u) redirect("/");
   // First sign-in goes to onboarding; return visits stay here.
-  if (u && !u.onboardedAt && !u.onboardingStep) redirect("/onboarding");
+  if (!u.onboardedAt && !u.onboardingStep) redirect("/onboarding");
+  const d = await loadRadarPage(db, u, { history: true });
   return (
     <>
-      <h1 className="text-3xl font-semibold tracking-tight">Signed in as {session.user.name ?? session.user.email}</h1>
-      <p className="text-muted">Your radar is coming in a later phase.</p>
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/onboarding" className="rounded-card bg-accent px-4 py-2 font-medium text-accent-foreground">Manage artists</Link>
-        {u?.isOwner && (
-          <Link href="/setup" className="rounded-card border border-surface-border px-4 py-2">Owner setup</Link>
-        )}
-      </div>
-      <form
-        action={async () => {
-          "use server";
-          await signOut({ redirectTo: "/" });
-        }}
-      >
-        <button className="rounded-card border border-surface-border px-4 py-2 text-sm">Sign out</button>
-      </form>
+      <AppHeader isOwner={!!u.isOwner} name={u.name} image={u.image} />
+      <main className="mx-auto w-full max-w-5xl px-4 py-6">
+        <h1 className="mb-6 text-2xl font-semibold tracking-tight">Your radar</h1>
+        <RadarView {...d} homeCity={u.homeCity ?? "Bengaluru"} />
+      </main>
     </>
   );
 }
 
 export default function Radar() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center gap-6 px-4 py-16">
-      <Suspense fallback={<div className="h-10 w-72 animate-pulse rounded-card bg-surface-border" />}>
-        <Greeting />
-      </Suspense>
-    </main>
+    <Suspense fallback={<RadarSkeleton />}>
+      <Loaded />
+    </Suspense>
   );
 }

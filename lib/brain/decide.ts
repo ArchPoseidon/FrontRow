@@ -53,7 +53,7 @@ export async function decideForEvents(db: Db, eventIds: string[], onlyUserId?: s
             target: [schema.alerts.userId, schema.alerts.eventId, schema.alerts.kind, schema.alerts.channel],
             set: { urgency, status: urgency === "info" ? "digest_pending" : "pending" },
             // Only upgrade an alert that has not gone out yet.
-            setWhere: sql`${schema.alerts.sentAt} is null and (case ${schema.alerts.urgency} when 'red' then 2 when 'amber' then 1 else 0 end) < ${RANK[urgency]}`,
+            setWhere: sql`${schema.alerts.sentAt} is null and ${schema.alerts.status} in ('pending','digest_pending') and (case ${schema.alerts.urgency} when 'red' then 2 when 'amber' then 1 else 0 end) < ${RANK[urgency]}`,
           })
           .returning({ id: schema.alerts.id, sentAt: schema.alerts.sentAt });
         if (rows.length) created.push({ userId: w.user.id, eventId: ev.id, urgency });

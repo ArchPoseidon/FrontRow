@@ -97,7 +97,7 @@ export function AlertsStep({ onBack }: { onBack: () => void }) {
         ) : (
           <>
             <label className="flex items-center gap-3 text-sm">
-              <input type="checkbox" checked={settings.emailEnabled} onChange={(e) => toggleEmail(e.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
+              <input type="checkbox" checked={settings.emailEnabled && settings.emailAvailable} disabled={!settings.emailAvailable} onChange={(e) => toggleEmail(e.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
               <span>Email me at <b>{settings.email}</b></span>
             </label>
             {!settings.emailAvailable && <p className="text-xs text-muted">Email sending isn&apos;t switched on for this server yet, so Telegram is the way to get alerts for now.</p>}

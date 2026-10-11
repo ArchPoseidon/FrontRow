@@ -38,3 +38,11 @@
 - The digest records one `digest` alert row per (user, event), so no event is in two digests; info alerts are included whatever their age.
 - Test alert uses the nearest real event (home city first), labelled Test. Only with none, a stored `is_sample` event is used, labelled Sample.
 - Onboarding steps 3 (cities) and 4 (alerts) are built; "Find my shows" on step 4 goes to /welcome. Existing onboarded users reopening /onboarding land on step 2.
+- Phase 4: one `EventCard` component (compact and full; the poster size is the OG route). Card states built: announced with go-live countdown, early bird open, on sale, sold out, rumour (dashed border, no ticket button), festival lineup, sample (labelled). Tier ladder lights the open tier, strikes sold-out, dims upcoming.
+- `/demo` shows the owner's radar read-only (artists panel included, alert history and settings left out). Scan now there is public, 1 per 2 minutes globally, and sends no alerts. Signed-in Scan now is 1 per 2 minutes per user and does send alerts.
+- Scan now runs the news step for up to 40 of the user's artists (must-see first). The grounded web search stays in the first-run scan and the daily sweep job, because it is slower and costs more.
+- `/api/health` folds per-user scan runs into one public `scan-now` entry so no user ids leak. System pulse dots: green OK, grey not run yet, amber running late (3x interval), red failing.
+- "Not for me" on the dashboard and Telegram share one record (`alerts.user_action = dismissed`); dismissed shows leave the radar. Delete account removes the user and everything that cascades; the owner account can't be deleted from the UI.
+- The radar timeline shows 12 cards at a time with "Show more", and the artists panel 12 with "Show all", so 100+ artists stay usable on a phone.
+- Email is not switched on, so the Settings email toggle is disabled with an honest note, and no email alerts are queued.
+- Show times like "18:30:00+05:30" are shown as "6:30 pm" everywhere.

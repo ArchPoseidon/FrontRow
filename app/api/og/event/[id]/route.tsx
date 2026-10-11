@@ -1,3 +1,4 @@
+import { formatShowTime } from "@/lib/util/ist";
 import { ImageResponse } from "next/og";
 import { getDb } from "@/lib/db";
 import { loadEventCard, reasonLine, type Urgency } from "@/lib/notify/content";
@@ -38,7 +39,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
           <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 14 }}>
             <span style={{ fontSize: 64, fontWeight: 800, lineHeight: 1.05 }}>{ev.artistName}</span>
             <span style={{ fontSize: 34, color: "#d6d3d1" }}>{[ev.venue, ev.city].filter(Boolean).join(" · ")}</span>
-            {ev.time ? <span style={{ fontSize: 28, color: "#a8a29e" }}>{ev.time}</span> : null}
+            {ev.time ? <span style={{ fontSize: 28, color: "#a8a29e" }}>{formatShowTime(ev.time)}</span> : null}
             {tiers.length > 0 ? (
               <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
                 {tiers.map((t, i) => (

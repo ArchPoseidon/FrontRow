@@ -1,0 +1,43 @@
+export type Urgency = "red" | "amber" | "info";
+
+export type TierView = { name: string; priceInr: number | null; status: "upcoming" | "open" | "sold_out" | "closed" | null; opensAt: string | null; closesAt: string | null };
+
+// Plain-JSON view of an event for one viewer, safe to pass from server to client components.
+export type EventView = {
+  id: string;
+  artistId: string;
+  artistName: string;
+  artistImage: string | null;
+  title: string | null;
+  venue: string | null;
+  city: string | null;
+  date: string | null; // YYYY-MM-DD
+  time: string | null;
+  status: string | null;
+  ticketUrl: string | null;
+  isFestival: boolean;
+  isSample: boolean;
+  confidence: number | null;
+  lineup: string[];
+  tiers: TierView[];
+  saleOpensAt: string | null;
+  sources: { url: string; platform: string | null }[];
+  urgency: Urgency;
+  reason: string;
+  countdown: { to: string; label: string } | null; // live countdown target
+  inHomeCity: boolean;
+  dismissed?: boolean;
+};
+
+export type ArtistView = {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  identityStatus: string | null;
+  priority: "must_see" | "follow" | "muted";
+  lastIndiaShow: string | null;
+  lastCheckedAt: string | null;
+  upcomingCount: number;
+};
+
+export type AlertView = { id: string; artistName: string; city: string | null; date: string | null; channel: string; kind: string; urgency: string | null; sentAt: string | null; status: string | null; action: string | null };

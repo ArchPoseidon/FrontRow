@@ -68,10 +68,23 @@ async function handleMessage(db: Db, chatId: number, text: string) {
         .innerJoin(schema.artists, eq(schema.artists.id, schema.userArtists.artistId))
         .where(eq(schema.userArtists.userId, user.id));
       if (!rows.length) return sendMessage(chatId, "You're not following any artists yet.");
-      const must = rows.filter((r) => r.priority === "must_see").map((r) => esc(r.name));
-      const rest = rows.filter((r) => r.priority === "follow").length;
-      const muted = rows.filter((r) => r.priority === "muted").length;
-      return sendMessage(chatId, `Following ${rows.length} artists (${must.length} must-see, ${rest} follow, ${muted} muted).${must.length ? `\n<b>Must-see:</b> ${must.slice(0, 25).join(", ")}` : ""}`);
+      const order = { must_see: 0, follow: 1, muted: 2 } as const;
+      const sorted = [...rows].sort((x, y) => order[(x.priority ?? "follow") as keyof typeof order] - order[(y.priority ?? "follow") as keyof typeof order] || x.name.localeCompare(y.name));
+      const tag = (p: string | null) => (p === "must_see" ? " ⭐" : p === "muted" ? " 🔕" : "");
+      const list = sorted.map((r, i) => `${i + 1}. ${esc(r.name)}${tag(r.priority)}`);
+      // Telegram caps a message at 4096 characters: send in chunks.
+      const chunks: string[] = [];
+      let cur = `<b>Following ${rows.length} artists</b> (⭐ must-see, 🔕 muted)\n`;
+      for (const line of list) {
+        if (cur.length + line.length + 1 > 3800) {
+          chunks.push(cur);
+          cur = "";
+        }
+        cur += `${line}\n`;
+      }
+      chunks.push(cur);
+      for (const c of chunks) await sendMessage(chatId, c);
+      return;
     }
     case "/mute": {
       if (!arg) return sendMessage(chatId, "Tell me who: /mute &lt;artist&gt;");

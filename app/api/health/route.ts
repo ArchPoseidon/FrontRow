@@ -25,8 +25,10 @@ export async function GET() {
       db.select().from(schema.runs).orderBy(desc(schema.runs.startedAt)).limit(60),
     ]);
     // Last run per job: real rows only, empty until a job has run.
-    const jobs = [...new Set(runs.map((r) => r.job))].map((job) => {
-      const r = runs.find((x) => x.job === job)!;
+    // Per-user scan runs are folded into one public "scan-now" entry (no user ids leak).
+    const jobName = (j: string) => (j.startsWith("scan-now:") ? "scan-now" : j);
+    const jobs = [...new Set(runs.map((r) => jobName(r.job)))].map((job) => {
+      const r = runs.find((x) => jobName(x.job) === job)!;
       return { job, startedAt: r.startedAt, finishedAt: r.finishedAt, itemsIn: r.itemsIn, eventsNew: r.eventsNew, alertsSent: r.alertsSent, errors: r.errors };
     });
     return NextResponse.json({
@@ -46,6 +48,8 @@ export async function GET() {
         lastRunAt: s.lastRunAt,
         lastOkAt: s.lastOkAt,
         lastError: s.lastError,
+        consecutiveFailures: s.consecutiveFailures,
+        intervalMinutes: s.intervalMinutes,
       })),
       spotify: ownerSpotify ? { connected: true, broken: !!ownerSpotify.broken } : { connected: false, broken: false },
       jobs,

@@ -1,3 +1,4 @@
+import { formatShowTime } from "@/lib/util/ist";
 import { appUrl } from "./email";
 import { URGENCY_EMOJI, headline, reasonLine, showDay, type EventCard, type Urgency } from "./content";
 
@@ -20,7 +21,7 @@ function card(ev: EventCard, urgency: Urgency, kind: "alert" | "test" = "alert")
 <p style="margin:0;font-size:12px;font-weight:700;letter-spacing:.04em;color:${BAND[urgency]}">${URGENCY_EMOJI[urgency]} ${e(headline(ev, kind))}</p>
 <h2 style="margin:6px 0 2px;font-size:22px">${e(ev.artistName)}</h2>
 <p style="margin:0;color:#57534e">${e([ev.venue, ev.city].filter(Boolean).join(" · "))}</p>
-<p style="margin:4px 0 0">${e([showDay(ev.date), ev.time].filter(Boolean).join(", "))}</p>
+<p style="margin:4px 0 0">${e([showDay(ev.date), formatShowTime(ev.time)].filter(Boolean).join(", "))}</p>
 ${reason ? `<p style="margin:8px 0 0;font-weight:600">${e(reason)}</p>` : ""}
 <p style="margin:12px 0 0;font-size:13px;color:#78716c">Sources: ${e(ev.platforms.slice(0, 4).join(", ") || "see links")}</p>
 <p style="margin:16px 0 0">${btn} <a href="${appUrl()}/api/ics/${ev.id}" style="margin-left:10px;color:#57534e">Add to calendar</a></p>

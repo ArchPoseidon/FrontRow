@@ -32,3 +32,12 @@ export function addDays(days: number, now = new Date()): string {
   const [y, m, d] = todayIST(now).split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
+
+// "18:30:00+05:30" / "18:30" / "7 PM" -> "6:30 pm"; free text is returned as is.
+export function formatShowTime(t: string | null): string | null {
+  if (!t) return null;
+  const m = /^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(?:\+05:30|IST))?$/i.exec(t.trim());
+  if (!m) return t.trim();
+  const h = Number(m[1]);
+  return `${h % 12 || 12}${m[2] === "00" ? "" : `:${m[2]}`} ${h >= 12 ? "pm" : "am"}`;
+}

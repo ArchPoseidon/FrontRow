@@ -1,8 +1,9 @@
+import { formatShowTime } from "@/lib/util/ist";
 import { esc } from "./telegram";
 import { URGENCY_EMOJI, headline, reasonLine, showDay, type EventCard, type Urgency } from "./content";
 
 export function telegramCaption(ev: EventCard, urgency: Urgency, kind: "alert" | "test" = "alert") {
-  const when = [showDay(ev.date), ev.time].filter(Boolean).join(", ");
+  const when = [showDay(ev.date), formatShowTime(ev.time)].filter(Boolean).join(", ");
   const reason = reasonLine(ev);
   const lines = [
     `${URGENCY_EMOJI[urgency]} <b>${esc(headline(ev, kind))}</b>`,
