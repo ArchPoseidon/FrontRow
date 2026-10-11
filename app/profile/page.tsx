@@ -34,7 +34,7 @@ async function Loaded() {
   return (
     <>
       <AppHeader isOwner={!!u.isOwner} name={u.name} image={u.image} />
-      <section className="concert-bg" style={{ ["--concert-img" as string]: "url(/concert/hero.jpg)" }}>
+      <section>
         <div className="mx-auto flex w-full max-w-3xl items-center gap-4 px-4 py-8">
           {u.image ? (
             // eslint-disable-next-line @next/next/no-img-element

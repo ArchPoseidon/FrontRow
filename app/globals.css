@@ -12,6 +12,8 @@
   --accent-foreground: #141414;
   --paper: #f3e4f1;
   --paper-ink: #1a1022;
+  --wordmark: #f0e8f1; /* slightly off-white logo and display type */
+  --wordmark-soft: #d3b4da; /* dusty orchid, pulled from the photos */
   --magenta: #e45bd0; /* highlight: links, wordmark, active states */
   --urgency-red: #ff3b5c;
   --urgency-amber: #ffa630;
@@ -23,7 +25,6 @@
   --stage-soldout: #57534e;
   --radius: 0.375rem;
   --space-gutter: 1rem;
-  --concert-dim: rgba(16, 7, 22, 0.70); /* overlay that dims the concert photo */
   color-scheme: dark;
 }
 
@@ -46,6 +47,8 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-magenta: var(--magenta);
+  --color-wordmark: var(--wordmark);
+  --color-wordmark-soft: var(--wordmark-soft);
   --color-accent-foreground: var(--accent-foreground);
   --color-stage-live: var(--stage-live);
   --color-stage-soon: var(--stage-soon);
@@ -69,23 +72,8 @@ body {
 /* ---------- Stub components ---------- */
 .font-display { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.005em; }
 
-/* Real concert photo, dimmed. The file is /public/concert/*.jpg; without it the dark overlay alone shows. */
-.concert-bg { position: relative; isolation: isolate; }
-.concert-bg::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  background: var(--concert-img, none) center / cover no-repeat;
-}
-.concert-bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(180deg, var(--concert-dim) 0%, rgba(13, 9, 17, 0.94) 100%);
-}
-.concert-fixed::before, .concert-fixed::after { position: fixed; }
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+.backdrop-in { animation: backdrop-in 1.4s ease both; }
 
 /* Paper ticket */
 .ticket-paper { background: var(--paper); color: var(--paper-ink); }
@@ -114,5 +102,5 @@ body {
 .perf-line { height: 0; border-top: 2px dashed var(--paper); animation: dash-move 0.9s linear infinite; background: repeating-linear-gradient(90deg, transparent 0 7px, transparent 7px 14px); }
 
 @media (prefers-reduced-motion: reduce) {
-  .flip-face, .perf-line, .rise-in { animation: none !important; transition: none !important; }
+  .flip-face, .perf-line, .rise-in, .backdrop-in { animation: none !important; transition: none !important; }
 }

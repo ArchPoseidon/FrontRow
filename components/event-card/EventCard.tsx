@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArtistPhoto } from "@/components/artist/ArtistPhoto";
-import { concertFor } from "@/lib/concert";
+import Image from "next/image";
+import { cardConcert } from "@/lib/concert";
 import { formatShowTime } from "@/lib/util/ist";
 import { STAGE_LABEL, type Stage } from "@/lib/stage";
 import { Countdown } from "./Countdown";
@@ -27,10 +28,10 @@ export function confidenceLine(ev: Pick<EventView, "confidence" | "sources">) {
 }
 
 type Mark = "going" | "saved" | null;
-const FACES = ["show", "photo", "details"] as const;
+const FACES = ["show", "photo", "concert", "details"] as const;
 
-// A show as a ticket. The window flips between three faces: the show over a dimmed concert photo,
-// the artist's photo, and the tiers and sources. Tap the window (or a dot) to flip; `auto` flips on its own.
+// A show as a ticket. The window flips between four faces: the show (name, date, where), the artist's photo,
+// a concert photo as it is (no text), and the tiers and sources. Tap the card or a dot to flip; `auto` flips on its own.
 export function EventCard({
   ev,
   size = "compact",
@@ -59,10 +60,10 @@ export function EventCard({
   const p = dateParts(ev.date);
   const rumor = ev.status === "rumored";
   const full = size === "full";
-  const h = full ? 280 : 214;
+  const h = full ? 260 : 158;
   const others = ev.lineup.filter((n) => n.toLowerCase() !== ev.artistName.toLowerCase());
   const pos = (i: number) => (i === f ? "on" : i < f ? "prev" : "next");
-  const img = concertFor(ev.id);
+  const img = ev.concertImage ?? cardConcert(ev.id);
   const next = () => {
     setPaused(true);
     setF((x) => (x + 1) % FACES.length);
@@ -76,10 +77,10 @@ export function EventCard({
       </div>
 
       <div className="flip" style={{ height: h }}>
-        {/* Face 1: the show, over a dimmed concert photo */}
-        <div className="flip-face concert-bg flex flex-col justify-between p-3" data-pos={pos(0)} aria-hidden={f !== 0} style={{ ["--concert-img" as string]: `url(${img})` }}>
+        {/* Face 1: the show, plain */}
+        <div className="flip-face flex flex-col justify-between bg-gradient-to-br from-[#241833] via-surface to-[#150d1d] p-3" data-pos={pos(0)} aria-hidden={f !== 0}>
           <div className="flex items-start gap-3">
-            <div className="flex w-14 shrink-0 flex-col items-center rounded-md border border-white/25 bg-black/40 py-1.5 leading-none">
+            <div className="flex w-14 shrink-0 flex-col items-center rounded-md border border-white/20 bg-black/30 py-1.5 leading-none">
               <span className="text-[10px] tracking-wider text-white/70 uppercase">{p.dow}</span>
               <span className="font-display my-0.5 text-3xl font-extrabold">{p.day}</span>
               <span className="text-[10px] font-bold uppercase">{p.mon}</span>
@@ -111,8 +112,16 @@ export function EventCard({
           </div>
         </div>
 
-        {/* Face 3: tiers and sources, on paper */}
-        <div className="flip-face ticket-paper overflow-y-auto p-3" data-pos={pos(2)} aria-hidden={f !== 2}>
+        {/* Face 3: a concert photo, as it is */}
+        <div className="flip-face" data-pos={pos(2)} aria-hidden={f !== 2}>
+          <div className="relative h-full w-full overflow-hidden">
+            <Image src={img} alt="" fill sizes="(max-width: 640px) 90vw, 420px" quality={75} className="object-cover" style={{ filter: "saturate(0.85) brightness(0.92)" }} />
+            <div className="absolute inset-0 bg-black/15" />
+          </div>
+        </div>
+
+        {/* Face 4: tiers and sources, on paper */}
+        <div className="flip-face ticket-paper overflow-y-auto p-3" data-pos={pos(3)} aria-hidden={f !== 3}>
           <TierLadder tiers={ev.tiers} paper />
           {ev.tiers.length === 0 && <p className="text-sm text-black/60">No ticket tiers listed yet.</p>}
           {ev.isFestival && others.length > 0 && <p className="mt-2 text-xs text-black/70"><b>Also on the lineup:</b> {others.slice(0, full ? 40 : 8).join(", ")}</p>}

@@ -7,7 +7,7 @@ import { SpotifyMark } from "./SpotifyMark";
 export function ConnectOverlay({ phase }: { phase: "connecting" | "importing" }) {
   const steps = phase === "connecting" ? ["Opening Spotify", "Asking to read who you follow", "Back in a moment"] : ["Signed in", "Reading followed artists", "Reading top artists", "Matching to the right people"];
   return (
-    <div className="concert-bg fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-background px-6" role="status" aria-live="polite" style={{ ["--concert-img" as string]: "url(/concert/hero.jpg)" }}>
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-background/85 backdrop-blur-md px-6" role="status" aria-live="polite">
       <div className="flex w-full max-w-xs items-center">
         <div className="flex h-16 w-16 shrink-0 -rotate-3 items-center justify-center rounded-md border border-surface-border bg-surface font-display text-3xl font-black text-accent">F</div>
         <div className="relative mx-1 h-0.5 flex-1">

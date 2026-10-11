@@ -17,7 +17,7 @@ async function Loaded({ searchParams }: { searchParams: SearchParams }) {
 
 export default function Onboarding({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <main className="concert-bg min-h-screen" style={{ ["--concert-img" as string]: "url(/concert/hero.jpg)" }}>
+    <main className="min-h-screen">
       <Suspense fallback={<div className="mx-auto h-40 w-full max-w-3xl animate-pulse px-4 py-8" />}>
         <Loaded searchParams={searchParams} />
       </Suspense>

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Big_Shoulders, Geist_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
+import { Backdrop } from "@/components/shell/Backdrop";
 
 const instrument = Instrument_Sans({
   variable: "--font-instrument",
@@ -29,7 +31,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${instrument.variable} ${bigShoulders.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Suspense fallback={<div aria-hidden className="fixed inset-0 -z-10 bg-background" />}>
+          <Backdrop />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }

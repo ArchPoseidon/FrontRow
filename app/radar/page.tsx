@@ -20,7 +20,7 @@ async function Loaded() {
   return (
     <>
       <AppHeader isOwner={!!u.isOwner} name={u.name} image={u.image} />
-      <section className="concert-bg" style={{ ["--concert-img" as string]: "url(/concert/hero.jpg)" }}>
+      <section>
         <div className="mx-auto w-full max-w-5xl px-4 py-8">
           <p className="text-xs font-bold tracking-widest text-muted uppercase">{u.homeCity ?? "Bengaluru"} · {d.events.length} shows on your radar</p>
           <h1 className="font-display text-6xl leading-[0.9] font-black sm:text-7xl">Your radar</h1>
