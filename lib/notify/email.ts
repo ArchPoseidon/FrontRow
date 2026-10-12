@@ -3,7 +3,12 @@ import nodemailer from "nodemailer";
 
 export const appUrl = () => (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
+// Gmail API: sends as a connected Gmail account with a refresh token (no app password, no domain).
+// Obtained once with `scripts/connect-gmail-sender.ts`; needs the gmail.send permission.
+const gmailApiReady = () => !!(process.env.GMAIL_REFRESH_TOKEN && process.env.GMAIL_SENDER && process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
+
 export function emailConfigured() {
+  if (gmailApiReady()) return true;
   if (process.env.EMAIL_PROVIDER === "resend") return !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
   return !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
 }
@@ -17,8 +22,39 @@ export function verifyUnsubscribe(userId: string, token: string) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+let gmailToken: { token: string; exp: number } | null = null;
+async function gmailAccessToken(): Promise<string> {
+  if (gmailToken && gmailToken.exp > Date.now() + 60_000) return gmailToken.token;
+  const r = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: process.env.AUTH_GOOGLE_ID!, client_secret: process.env.AUTH_GOOGLE_SECRET!, grant_type: "refresh_token", refresh_token: process.env.GMAIL_REFRESH_TOKEN! }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const j = (await r.json().catch(() => ({}))) as { access_token?: string; expires_in?: number; error_description?: string };
+  if (!r.ok || !j.access_token) throw new Error(`Gmail sign-in expired (${j.error_description ?? r.status}). Run scripts/connect-gmail-sender.ts again.`);
+  gmailToken = { token: j.access_token, exp: Date.now() + (j.expires_in ?? 3600) * 1000 };
+  return gmailToken.token;
+}
+
+async function sendViaGmailApi(to: string, subject: string, html: string, text: string, headers: Record<string, string>) {
+  const { default: MailComposer } = await import("nodemailer/lib/mail-composer");
+  const sender = process.env.GMAIL_SENDER!;
+  const raw = await new Promise<Buffer>((resolve, reject) =>
+    new MailComposer({ from: process.env.EMAIL_FROM || `FrontRow <${sender}>`, to, subject, text, html, headers }).compile().build((e, msg) => (e ? reject(e) : resolve(msg))),
+  );
+  const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await gmailAccessToken()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ raw: raw.toString("base64url") }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!r.ok) throw new Error(`Gmail API ${r.status}: ${(await r.text()).slice(0, 160)}`);
+}
+
 export async function sendEmail(to: string, subject: string, html: string, text: string, unsubscribe: string) {
   const headers = { "List-Unsubscribe": `<${unsubscribe}>` };
+  if (gmailApiReady()) return sendViaGmailApi(to, subject, html, text, headers);
   if (process.env.EMAIL_PROVIDER === "resend") {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
