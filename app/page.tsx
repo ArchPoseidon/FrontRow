@@ -32,6 +32,7 @@ async function Buttons({ searchParams }: { searchParams: Promise<{ signin?: stri
         </form>
         <Link href="/demo" className="rounded-card border border-white/40 bg-black/30 px-7 py-3.5 text-base font-bold backdrop-blur transition hover:bg-black/50">See a live demo</Link>
       </div>
+      <p className="max-w-md text-xs text-white/70">Google will also ask to let FrontRow add shows to your calendar. That part is optional: untick it and everything else still works.</p>
     </div>
   );
 }

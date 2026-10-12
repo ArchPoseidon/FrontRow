@@ -29,6 +29,13 @@
       "when": 1791756351607,
       "tag": "0003_scrapedo_credits",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791790421955,
+      "tag": "0004_first_scan_at",
+      "breakpoints": true
     }
   ]
 }

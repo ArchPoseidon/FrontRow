@@ -38,6 +38,7 @@ export const users = pgTable("users", {
   telegramEnabled: boolean("telegram_enabled").default(true),
   onboardingStep: integer("onboarding_step").default(0),
   onboardedAt: tstz("onboarded_at"),
+  firstScanAt: tstz("first_scan_at"), // set when the first scan for this user is started (import, or the welcome screen)
   isOwner: boolean("is_owner").default(false),
   createdAt: tstz("created_at").defaultNow(),
 });

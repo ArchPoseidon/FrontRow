@@ -8,6 +8,7 @@ import { appUrl } from "@/lib/notify/email";
 import { upcomingForUser } from "@/lib/brain/scan";
 import { normalizeName } from "@/lib/identity/normalize";
 import { dispatchAlerts } from "@/lib/notify/dispatch";
+import { decideForEvents } from "@/lib/brain/decide";
 import { loadWatched } from "@/lib/brain/match";
 import { collectArtistNews } from "@/lib/collectors/news";
 import { processItems } from "@/lib/brain/process";
@@ -47,7 +48,20 @@ async function handleMessage(db: Db, chatId: number, text: string) {
     // A chat belongs to one account.
     await db.update(schema.users).set({ telegramChatId: null }).where(eq(schema.users.telegramChatId, chatId));
     await db.update(schema.users).set({ telegramChatId: chatId, telegramLinkCode: null, telegramEnabled: true }).where(eq(schema.users.id, u.id));
-    return sendMessage(chatId, `✅ Linked${u.name ? `, ${esc(u.name.split(" ")[0])}` : ""}! I'll message you here the moment one of your artists announces a show in India.\n\n${HELP}`);
+    // Linked: queue Telegram alerts for everything already found for this user's artists and send the first ones now,
+    // so a new user sees the product working straight away. The scheduled dispatch job sends the rest.
+    after(async () => {
+      try {
+        const [fresh] = await db.select().from(schema.users).where(eq(schema.users.id, u.id));
+        const shows = await upcomingForUser(db, u.id, fresh?.homeCity ?? null);
+        await decideForEvents(db, shows.map((s) => s.eventId), u.id);
+        const r = await dispatchAlerts(db, 20, u.id, 8);
+        if (!r.sent && !shows.length) await sendMessage(chatId, "No India shows announced for your artists yet. I'm scanning now and will message you the moment one lands.");
+      } catch (e) {
+        console.error("first alerts after link", e);
+      }
+    });
+    return sendMessage(chatId, `✅ Linked${u.name ? `, ${esc(u.name.split(" ")[0])}` : ""}! Sending your first alerts now, then I'll message you the moment one of your artists announces a show in India.\n\n${HELP}`);
   }
 
   const user = await userByChat(db, chatId);

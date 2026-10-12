@@ -11,6 +11,7 @@ import { dispatchAlerts } from "@/lib/notify/dispatch";
 import { displayCity, normalizeCity } from "@/lib/util/city";
 import { formatMonthYear, formatShowDate, todayIST } from "@/lib/util/ist";
 import { mapLimit } from "@/lib/util/retry";
+import { finishRun, startRun } from "@/lib/collectors/shared";
 import type { Emit } from "@/lib/util/sse";
 
 export const SWEEP_LIMIT = 8;
@@ -115,8 +116,12 @@ export async function buildSummary(db: Db, userId: string, homeCity: string | nu
 }
 
 // The first-run scan: instant match, news and grounded sweep run in parallel, streaming progress as SSE.
-export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelect, emit: Emit): Promise<{ credits: number }> {
+export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelect, emit: Emit, opts: { budgetMs?: number } = {}): Promise<{ credits: number }> {
   let credits = 0;
+  // Everything must fit the 60 s function limit. Whatever is not done by then stays queued (raw items, unchecked links)
+  // and the scheduled jobs finish it, so the user is never left waiting.
+  const deadline = Date.now() + (opts.budgetMs ?? 50_000);
+  const left = (reserve = 0) => Math.max(2_000, deadline - Date.now() - reserve);
   const mine = await db
     .select({ id: schema.userArtists.artistId, priority: schema.userArtists.priority, checkedAt: schema.artists.lastCheckedAt })
     .from(schema.userArtists)
@@ -157,11 +162,12 @@ export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelec
   const news = async () => {
     emit("step", { step: "news", state: "running" });
     const src = (await db.select().from(schema.sources).where(eq(schema.sources.name, ARTIST_NEWS_SOURCE)))[0];
-    const res = await collectArtistNews(db, src?.id ?? null, watched, { perArtist: 3 });
+    const forNews = [...watched].sort((a, b) => Number(mine.find((m) => m.id === b.id)?.priority === "must_see") - Number(mine.find((m) => m.id === a.id)?.priority === "must_see")).slice(0, 40);
+    const res = await collectArtistNews(db, src?.id ?? null, forNews, { perArtist: 3 });
     emit("log", { step: "news", text: `Read ${res.feeds - res.failedFeeds} news feeds, ${res.newItems} new headlines about your artists` });
     // New headlines only; the shared hash means headlines other users already pulled are processed by the 5-minute job.
     if (res.itemIds.length) {
-      const p = await processItems(db, { ids: res.itemIds.slice(0, 24), limit: 24, concurrency: 5 });
+      const p = await processItems(db, { ids: res.itemIds.slice(0, 20), limit: 20, concurrency: 6, verify: { maxEvents: 6, timeMs: left(15_000) } });
       credits += p.credits;
       await announce(p.eventIds);
     }
@@ -178,12 +184,13 @@ export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelec
     const src = (await db.select().from(schema.sources).where(eq(schema.sources.name, SWEEP_SOURCE)))[0];
     let failed = 0;
     await mapLimit(sweepIds, 4, async (id) => {
+      if (Date.now() > deadline - 12_000) return; // too late to start another: the daily sweep covers it
       const a = byId.get(id)!;
       const r = await sweepArtist(db, src?.id ?? null, a);
       if (r.error) failed++;
       emit("log", { step: "sweep", text: r.error ? `Couldn't search the web for ${a.name}` : r.found ? `Web search found shows for ${a.name}, checking details…` : `Web search: nothing announced for ${a.name}` });
       if (r.rawItemId) {
-        const p = await processItems(db, { ids: [r.rawItemId], limit: 1, concurrency: 1 });
+        const p = await processItems(db, { ids: [r.rawItemId], limit: 1, concurrency: 1, verify: { maxEvents: 4, timeMs: left(10_000) } });
         credits += p.credits;
         await announce(p.eventIds);
       }
@@ -191,11 +198,12 @@ export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelec
     emit("step", { step: "sweep", state: failed === sweepIds.length && sweepIds.length ? "error" : "done", count: sweepIds.length - failed });
   };
 
-  await Promise.all([instant(), news(), sweep()].map((p) => p.catch((e) => emit("log", { step: "all", text: `A source failed: ${e instanceof Error ? e.message.slice(0, 80) : "error"}` }))));
+  const steps = Promise.all([instant(), news(), sweep()].map((p) => p.catch((e) => emit("log", { step: "all", text: `A source failed: ${e instanceof Error ? e.message.slice(0, 80) : "error"}` }))));
+  await Promise.race([steps, new Promise((r) => setTimeout(r, left(6_000)))]);
   await refreshArtistCounts(db);
   // Matching alerts go out at the same moment, so the phone buzzes during onboarding.
   try {
-    const d = await dispatchAlerts(db, 20, user.id);
+    const d = await dispatchAlerts(db, 20, user.id, 8);
     if (d.sent) emit("log", { step: "all", text: `Alert${d.sent === 1 ? "" : "s"} sent: ${d.sent}` });
   } catch (e) {
     emit("log", { step: "all", text: `Couldn't send alerts: ${e instanceof Error ? e.message.slice(0, 80) : "error"}` });
@@ -204,3 +212,19 @@ export async function runFirstScan(db: Db, user: typeof schema.users.$inferSelec
   return { credits };
 }
 
+
+// Runs the first scan for a user right after their artists arrive (Spotify import, pasted list), without waiting
+// for them to click through onboarding. Once per user: the first caller wins. Matching alerts go out as they land;
+// the welcome screen then shows the same results. The scheduled jobs keep running on their own regardless.
+export async function startBackgroundScan(db: Db, userId: string, budgetMs = 34_000): Promise<boolean> {
+  const claimed = await db.update(schema.users).set({ firstScanAt: new Date() }).where(and(eq(schema.users.id, userId), isNull(schema.users.firstScanAt))).returning();
+  if (!claimed.length) return false;
+  const run = await startRun(db, "first-scan");
+  try {
+    const r = await runFirstScan(db, claimed[0], () => {}, { budgetMs });
+    await finishRun(db, run, { firecrawlCredits: r.credits });
+  } catch (e) {
+    await finishRun(db, run, { errors: [e instanceof Error ? e.message.slice(0, 160) : "scan failed"] });
+  }
+  return true;
+}

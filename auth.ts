@@ -4,8 +4,10 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 
-// Only `openid email profile` (non-sensitive) so the consent screen can be
-// published to production without Google verification.
+const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+
+// Sign-in asks for openid, email, profile and calendar.events (add events only).
+// The calendar scope is sensitive: while the app is in Testing mode only listed test users can sign in.
 export const { handlers, auth, signIn, signOut } = NextAuth(() => {
   const db = getDb();
   return {
@@ -18,7 +20,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
     session: { strategy: "database" },
     providers: [
       Google({
-        authorization: { params: { scope: "openid email profile" } },
+        // One consent screen at sign-up: identity plus permission to add shows to the user's calendar.
+        // Google's granular consent lets a user untick the calendar box and still sign in; Connections shows it as not connected.
+        // access_type=offline gets a refresh token on first consent, so adding to Google Calendar keeps working.
+        authorization: { params: { scope: `openid email profile ${CALENDAR_SCOPE}`, access_type: "offline", include_granted_scopes: "true" } },
       }),
     ],
     pages: { signIn: "/" },

@@ -34,7 +34,7 @@ export async function deliverEmail(user: UserRow, ev: EventCard, urgency: Urgenc
 }
 
 // Sends unsent red/amber alerts, oldest first. Rows are claimed atomically so overlapping runs never double-send.
-export async function dispatchAlerts(db: Db, limit = 20, onlyUserId?: string): Promise<DispatchStats> {
+export async function dispatchAlerts(db: Db, limit = 20, onlyUserId?: string, perUserCap?: number): Promise<DispatchStats> {
   const stats: DispatchStats = { sent: 0, failed: 0, skipped: 0, waitingForEmailSetup: 0, errors: [] };
   const emailReady = emailConfigured();
   const claimed = await db.execute<{ id: string }>(sql`
@@ -68,7 +68,7 @@ export async function dispatchAlerts(db: Db, limit = 20, onlyUserId?: string): P
     const bucket = `${a.userId}:${a.channel}`;
     const n = (perUser.get(bucket) ?? 0) + 1;
     perUser.set(bucket, n);
-    if (n > Number(process.env.INSTANT_ALERT_CAP ?? 5)) {
+    if (n > (perUserCap ?? Number(process.env.INSTANT_ALERT_CAP ?? 5))) {
       // Telegram bursts trickle out on the next runs; email overflow rolls into the digest.
       await set({ status: a.channel === "telegram" ? "pending" : "digest_pending" });
       stats.skipped++;

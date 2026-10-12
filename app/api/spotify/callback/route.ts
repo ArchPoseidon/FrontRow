@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/session";
 import { exchangeCode, getMe, SpotifyError } from "@/lib/identity/spotify";
 import { importFromSpotify } from "@/lib/identity/spotify-import";
 import { enrichArtists } from "@/lib/identity/artists";
+import { startBackgroundScan } from "@/lib/brain/scan";
 
 export const maxDuration = 60;
 
@@ -51,6 +52,10 @@ export async function GET(req: Request) {
   if (saved.next === "/setup") return back("connected");
   const r = await importFromSpotify(ctx.db, ctx.user.id);
   if (!r.ok) return back(r.reason === "forbidden" ? "invite_only" : "error");
-  after(() => enrichArtists(ctx.db, r.newArtistIds));
+  // Import done: start the first scan now, so shows and Telegram alerts are already arriving as onboarding continues.
+  after(async () => {
+    await startBackgroundScan(ctx.db, ctx.user.id).catch((e) => console.error("background scan", e));
+    await enrichArtists(ctx.db, r.newArtistIds);
+  });
   return back("imported");
 }

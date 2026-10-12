@@ -20,6 +20,6 @@ export async function POST() {
     });
     await finishRun(db, run, { firecrawlCredits: r.credits });
     // Mark onboarding as finished once the user has seen their first results.
-    await db.update(schema.users).set({ onboardedAt: user.onboardedAt ?? new Date() }).where(eq(schema.users.id, user.id));
+    await db.update(schema.users).set({ onboardedAt: user.onboardedAt ?? new Date(), firstScanAt: user.firstScanAt ?? new Date() }).where(eq(schema.users.id, user.id));
   });
 }

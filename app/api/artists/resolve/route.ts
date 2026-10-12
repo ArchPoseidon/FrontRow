@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUser, unauthorized } from "@/lib/session";
 import { resolveInputs } from "@/lib/identity/resolve";
 import { enrichArtists } from "@/lib/identity/artists";
+import { startBackgroundScan } from "@/lib/brain/scan";
 
 export const maxDuration = 60;
 
@@ -16,7 +17,11 @@ export async function POST(req: Request) {
   if (!body.success) return Response.json({ error: "Paste some artist names or Spotify links" }, { status: 400 });
 
   const result = await resolveInputs(ctx.db, ctx.user.id, body.data.inputs);
-  after(() => enrichArtists(ctx.db, result.newArtistIds));
+  after(async () => {
+    // A pasted list is a bulk add: start the first scan now.
+    if (result.resolved.length >= 3) await startBackgroundScan(ctx.db, ctx.user.id).catch((e) => console.error("background scan", e));
+    await enrichArtists(ctx.db, result.newArtistIds);
+  });
   const { newArtistIds: _n, ...rest } = result;
   return Response.json(rest);
 }

@@ -52,14 +52,18 @@ Vercel's free plan only runs daily jobs, so cron-job.org calls the job routes. O
 
 The System pulse on the radar turns each dot green once its job has run. The heartbeat message arrives on Telegram daily at 8:30.
 
-## Google Calendar (one time)
+## Google sign-in with Calendar permission (one time)
 
-"Add to calendar" always puts a show in the FrontRow calendar view. To also put it in Google Calendar, the Google project needs the Calendar API:
-1. Open https://console.cloud.google.com and pick the FrontRow project.
-2. Go to **APIs & Services > Library**, search for **Google Calendar API**, and click **Enable**.
-3. Go to **APIs & Services > OAuth consent screen > Data Access** (or **Scopes**), click **Add or remove scopes**, tick `.../auth/calendar.events`, and save.
-4. Nothing else changes: the redirect URI is the same one sign-in already uses. While the app is in Testing mode, only the test users you listed can connect Google Calendar, and Google shows them an "unverified app" screen once (**Continue** to proceed).
-5. In the app, open **Profile > Google Calendar > Connect Google Calendar**, or tap **Add to calendar** on any show.
+Sign-in now asks for identity (`openid email profile`) and permission to add events to the user's Google Calendar (`calendar.events`) on the same Google screen. "Add to calendar" always works inside FrontRow; with the permission it also writes to Google Calendar.
+
+1. Open https://console.cloud.google.com and pick the FrontRow project (top bar, project picker).
+2. **Enable the API:** left menu **APIs & Services > Library**, search **Google Calendar API**, click it, click **Enable**.
+3. **Add the permission to the consent screen:** left menu **APIs & Services > OAuth consent screen** (it may be called **Google Auth Platform** now). Open **Data Access** (or **Scopes**), click **Add or remove scopes**, scroll to **Manual scope entry**, paste `https://www.googleapis.com/auth/calendar.events`, click **Add to table**, tick it, click **Update**, then **Save**.
+4. **Keep it in Testing and list your judges:** open **Audience** (or **Test users**). The app stays in **Testing**. Click **Add users** and enter each judge's exact Google email (up to 100). Only listed emails can sign in. A new email takes a few minutes to start working.
+5. **What judges will see:** because the calendar permission is a "sensitive" scope and the app is unverified, Google first shows "Google hasn't verified this app". They click **Continue** (on some screens **Advanced > Go to FrontRow (unsafe)**), then see two checkboxes: sign in and **See, create and change events**. They can untick the calendar box and still sign in; the Connections tab then shows Google Calendar as not connected, with a Connect button.
+6. **Redirect URIs** are unchanged: `https://frontrow-pi-three.vercel.app/api/auth/callback/google` and `http://localhost:3000/api/auth/callback/google`.
+
+Publishing the app to everyone later needs Google's verification review for the calendar scope (a form, a demo video and a privacy page, usually days to weeks). That is why the app stays in Testing for the judging.
 
 ## Backup crawler
 
