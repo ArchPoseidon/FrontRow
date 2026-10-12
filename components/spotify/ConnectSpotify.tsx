@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SpotifyMark } from "./SpotifyMark";
 
 // Perforated line streaming between the FrontRow stub and Spotify, then the real redirect.
@@ -36,9 +36,30 @@ export function ConnectOverlay({ phase }: { phase: "connecting" | "importing" })
   );
 }
 
-// The "Connect Spotify" button: plays the animation for a beat, then goes to the real OAuth redirect.
+// The "Connect Spotify" button: shows the animation while the browser goes to Spotify. The redirect starts at once
+// (the animation plays during the load), so it never depends on a timer. If the page comes back (Back button) or the
+// redirect stalls, the overlay offers a direct link and a Cancel.
 export function ConnectSpotifyButton({ children, className }: { children: React.ReactNode; className?: string }) {
   const [busy, setBusy] = useState(false);
+  const [slow, setSlow] = useState(false);
+
+  // Coming back from Spotify with the Back button restores this page from cache with the overlay still up.
+  useEffect(() => {
+    const reset = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setBusy(false);
+        setSlow(false);
+      }
+    };
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
+  }, []);
+  useEffect(() => {
+    if (!busy) return;
+    const t = setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(t);
+  }, [busy]);
+
   return (
     <>
       <a
@@ -46,15 +67,30 @@ export function ConnectSpotifyButton({ children, className }: { children: React.
         onClick={(e) => {
           e.preventDefault();
           setBusy(true);
-          setTimeout(() => {
-            window.location.href = "/api/spotify/login";
-          }, 1700);
+          setSlow(false);
+          // Next frame: let the overlay paint, then go. No timer to lose.
+          requestAnimationFrame(() => {
+            window.location.assign("/api/spotify/login");
+          });
         }}
         className={className}
       >
         {children}
       </a>
-      {busy && <ConnectOverlay phase="connecting" />}
+      {busy && (
+        <>
+          <ConnectOverlay phase="connecting" />
+          {slow && (
+            <div className="fixed inset-x-0 bottom-10 z-[60] flex flex-col items-center gap-3 px-6 text-center text-sm">
+              <p className="text-white/80">Not moving?</p>
+              <div className="flex gap-3">
+                <a href="/api/spotify/login" className="rounded-card bg-[#1DB954] px-5 py-2.5 font-bold text-black">Open Spotify</a>
+                <button onClick={() => setBusy(false)} className="rounded-card border border-white/40 px-5 py-2.5 font-bold">Cancel</button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </>
   );
 }
