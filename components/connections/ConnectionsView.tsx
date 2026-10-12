@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { EmailMark, GoogleCalendarMark, TelegramMark, Tick } from "@/components/icons/BrandIcons";
+import { GoogleCalendarMark, TelegramMark, Tick } from "@/components/icons/BrandIcons";
 import { ConnectSpotifyButton } from "@/components/spotify/ConnectSpotify";
 import { SpotifyMark } from "@/components/spotify/SpotifyMark";
 import type { Connections } from "@/lib/data/connections";
@@ -62,7 +62,7 @@ export function ConnectionsView({ initial }: { initial: Connections }) {
     if (tg?.url && !c.telegram.connected) QRCode.toDataURL(tg.url, { margin: 1, width: 168 }).then(setQr).catch(() => setQr(null));
   }, [tg?.url, c.telegram.connected]);
 
-  const connectedCount = [c.spotify.connected, c.telegram.connected, c.calendar.connected, c.email.enabled].filter(Boolean).length;
+  const connectedCount = [c.spotify.connected, c.telegram.connected, c.calendar.connected].filter(Boolean).length;
 
   async function run(key: string, fn: () => Promise<void>) {
     setBusy(key);
@@ -109,13 +109,6 @@ export function ConnectionsView({ initial }: { initial: Connections }) {
       setMsg({ tone: "ok", text: "Google Calendar disconnected. Shows you already added stay where they are." });
     });
 
-  const toggleEmail = (on: boolean) =>
-    run("email", async () => {
-      const r = await fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ emailEnabled: on }) });
-      if (!r.ok) throw new Error("Couldn't save that");
-      setC((x) => ({ ...x, email: { ...x.email, enabled: on } }));
-    });
-
   return (
     <div className="flex flex-col gap-5">
       <div className={`${card} flex-row flex-wrap items-center justify-between`}>
@@ -123,9 +116,8 @@ export function ConnectionsView({ initial }: { initial: Connections }) {
           <Logo ok={c.spotify.connected}><SpotifyMark size={40} /></Logo>
           <Logo ok={c.telegram.connected}><TelegramMark size={40} /></Logo>
           <Logo ok={c.calendar.connected}><GoogleCalendarMark size={40} /></Logo>
-          <Logo ok={c.email.enabled}><EmailMark size={40} /></Logo>
         </div>
-        <p className="font-display text-3xl leading-none font-extrabold">{connectedCount} of 4 connected</p>
+        <p className="font-display text-3xl leading-none font-extrabold">{connectedCount} of 3 connected</p>
       </div>
 
       {msg && <p role="status" className={`rounded-card border px-4 py-3 text-sm ${msg.tone === "ok" ? "border-[var(--tier-open)]/60" : "border-urgency-red/60"}`}>{msg.text}</p>}
@@ -198,25 +190,6 @@ export function ConnectionsView({ initial }: { initial: Connections }) {
           <a href="/api/gcal/connect?return=/connections" className={`inline-block ${c.calendar.connected ? btn : "rounded-card bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground"}`}>{c.calendar.connected ? "Reconnect" : "Connect Google Calendar"}</a>
           {c.calendar.connected && <button onClick={disconnectCalendar} disabled={busy === "cal"} className={`${btn} text-muted`}>Disconnect</button>}
         </div>
-      </section>
-
-      {/* Email */}
-      <section className={card} aria-labelledby="c-em">
-        <div className="flex items-center gap-4">
-          <Logo ok={c.email.enabled}><EmailMark size={52} /></Logo>
-          <div className="min-w-0 flex-1">
-            <h2 id="c-em" className="font-display text-3xl leading-none font-extrabold">Email</h2>
-            <Status ok={c.email.enabled} on={`Connected · ${c.email.address ?? ""}`} off={c.email.available ? "Off" : "Not switched on yet"} />
-          </div>
-        </div>
-        {c.email.available ? (
-          <label className="flex items-center gap-3 text-sm">
-            <input type="checkbox" checked={c.email.enabled} disabled={busy === "email"} onChange={(e) => toggleEmail(e.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
-            Email me alerts and the daily digest
-          </label>
-        ) : (
-          <p className="text-sm text-muted">Email alerts aren&apos;t switched on for this server yet. Telegram is the way to get alerts for now.</p>
-        )}
       </section>
     </div>
   );

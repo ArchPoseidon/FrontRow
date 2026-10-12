@@ -4,12 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
 
 type Link = { linked: boolean; bot: string; url?: string | null; configured?: boolean };
-type Settings = { email: string | null; emailEnabled: boolean; emailAvailable: boolean };
 
 export function AlertsStep({ onBack }: { onBack: () => void }) {
   const [link, setLink] = useState<Link | null>(null);
   const [qr, setQr] = useState<string | null>(null);
-  const [settings, setSettings] = useState<Settings | null>(null);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +24,6 @@ export function AlertsStep({ onBack }: { onBack: () => void }) {
 
   useEffect(() => {
     loadLink();
-    fetch("/api/settings").then((r) => r.json()).then(setSettings).catch(() => setError("Couldn't load your settings"));
   }, [loadLink]);
 
   // Poll until the link is confirmed.
@@ -39,12 +36,6 @@ export function AlertsStep({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     if (link?.url) QRCode.toDataURL(link.url, { margin: 1, width: 180 }).then(setQr).catch(() => setQr(null));
   }, [link?.url]);
-
-  const toggleEmail = async (on: boolean) => {
-    if (!settings) return;
-    setSettings({ ...settings, emailEnabled: on });
-    await fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ emailEnabled: on }) }).catch(() => setError("Couldn't save that"));
-  };
 
   const sendTest = async () => {
     setTesting(true);
@@ -61,7 +52,7 @@ export function AlertsStep({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const canTest = !!link?.linked || (!!settings?.emailEnabled && settings.emailAvailable);
+  const canTest = !!link?.linked;
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,20 +81,6 @@ export function AlertsStep({ onBack }: { onBack: () => void }) {
         )}
       </section>
 
-      <section className="space-y-2 rounded-card border border-surface-border bg-surface p-4">
-        <h2 className="font-semibold">Email</h2>
-        {!settings ? (
-          <div className="h-10 animate-pulse rounded-card bg-surface-border" />
-        ) : (
-          <>
-            <label className="flex items-center gap-3 text-sm">
-              <input type="checkbox" checked={settings.emailEnabled && settings.emailAvailable} disabled={!settings.emailAvailable} onChange={(e) => toggleEmail(e.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
-              <span>Email me at <b>{settings.email}</b></span>
-            </label>
-            {!settings.emailAvailable && <p className="text-xs text-muted">Email sending isn&apos;t switched on for this server yet, so Telegram is the way to get alerts for now.</p>}
-          </>
-        )}
-      </section>
 
       <section className="space-y-2">
         <button onClick={sendTest} disabled={testing || !canTest} className="rounded-card border border-surface-border px-4 py-2.5 font-medium disabled:opacity-50">
@@ -121,7 +98,7 @@ export function AlertsStep({ onBack }: { onBack: () => void }) {
           <button onClick={() => (window.location.href = "/welcome")} className="rounded-card bg-accent px-5 py-2.5 font-medium text-accent-foreground">
             Find my shows
           </button>
-          {!link?.linked && link?.configured && <p className="text-xs text-muted">You can connect Telegram later in Settings.</p>}
+          {!link?.linked && link?.configured && <p className="text-xs text-muted">You can connect Telegram later under Profile, then Connections.</p>}
         </div>
       </footer>
     </div>

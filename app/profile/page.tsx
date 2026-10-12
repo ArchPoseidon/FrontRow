@@ -9,7 +9,7 @@ import { ProfileArtists } from "@/components/profile/ProfileArtists";
 import { SettingsForm } from "@/components/settings/SettingsForm";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { getConnections } from "@/lib/data/connections";
-import { EmailMark, GoogleCalendarMark, TelegramMark, Tick } from "@/components/icons/BrandIcons";
+import { GoogleCalendarMark, TelegramMark, Tick } from "@/components/icons/BrandIcons";
 import { SpotifyMark } from "@/components/spotify/SpotifyMark";
 import Link from "next/link";
 
@@ -56,7 +56,6 @@ async function Loaded() {
               { ok: conn.spotify.connected, el: <SpotifyMark size={34} /> },
               { ok: conn.telegram.connected, el: <TelegramMark size={34} /> },
               { ok: conn.calendar.connected, el: <GoogleCalendarMark size={34} /> },
-              { ok: conn.email.enabled, el: <EmailMark size={34} /> },
             ].map((x, i) => (
               <span key={i} className="relative">
                 {x.el}
@@ -64,7 +63,7 @@ async function Loaded() {
               </span>
             ))}
           </div>
-          <span className="text-sm font-bold">{[conn.spotify.connected, conn.telegram.connected, conn.calendar.connected, conn.email.enabled].filter(Boolean).length} of 4 connected · Manage →</span>
+          <span className="text-sm font-bold">{[conn.spotify.connected, conn.telegram.connected, conn.calendar.connected].filter(Boolean).length} of 3 connected · Manage →</span>
         </Link>
         <section className={card} aria-labelledby="my-artists">
           <h2 id="my-artists" className="font-display text-3xl font-extrabold">Your artists</h2>
