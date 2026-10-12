@@ -34,7 +34,11 @@ export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, manage }:
     const t = setTimeout(() => setImporting(false), 3600);
     return () => clearTimeout(t);
   }, [importing]);
-  const [step, setStep] = useState(Math.min(Math.max(initialStep, 1), 4));
+  // Artists and their confirmation are one page now (old saved step 2 maps to 1): artists, then cities, then alerts.
+  const [step, setStep] = useState(() => {
+    const n = Math.min(Math.max(initialStep, 1), 4);
+    return n === 2 ? 1 : n;
+  });
   const [artists, setArtists] = useState<MyArtist[] | null>(null);
   const [review, setReview] = useState<ReviewItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -202,21 +206,39 @@ export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, manage }:
 
   const count = artists?.length ?? 0;
   const mustSee = artists?.filter((a) => a.priority === "must_see").length ?? 0;
+  const stepNo = step === 1 ? 1 : step === 3 ? 2 : 3;
+  const canConfirm = review.length === 0 && count > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
       <header className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
-          <h1 className="font-display text-5xl leading-[0.92] font-black">{manage ? "Add more artists" : ["", "Who do you want to catch live?", "Confirm your artists", "Where should we watch?", "How should we alert you?"][step]}</h1>
-          {!manage && <span className="text-sm text-muted">Step {step} of 4</span>}
+          <h1 className="font-display text-5xl leading-[0.92] font-black">{manage ? "Add more artists" : ["", "Who do you want to catch live?", "", "Where should we watch?", "How should we alert you?"][step]}</h1>
+          {!manage && <span className="text-sm text-muted">Step {stepNo} of 3</span>}
         </div>
-        <div hidden={!!manage} className="h-1.5 overflow-hidden rounded-full bg-surface-border" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={4}>
-          <div className="h-full bg-accent transition-all" style={{ width: `${(step / 4) * 100}%` }} />
+        <div hidden={!!manage} className="h-1.5 overflow-hidden rounded-full bg-surface-border" role="progressbar" aria-valuenow={stepNo} aria-valuemin={1} aria-valuemax={3}>
+          <div className="h-full bg-accent transition-all" style={{ width: `${(stepNo / 3) * 100}%` }} />
         </div>
-        <p className="text-sm text-muted" aria-live="polite" hidden={step > 2}>
+        <p className="text-sm text-muted" aria-live="polite" hidden={step !== 1}>
           {artists === null ? "Loading your artists…" : `${count} artist${count === 1 ? "" : "s"} added${mustSee ? ` · ${mustSee} must-see` : ""}`}
         </p>
       </header>
+
+      {/* The same confirm button sits at the top too, so a long list never needs a scroll to continue. */}
+      {step === 1 && (
+        <div className="sticky top-2 z-20 flex flex-wrap items-center justify-between gap-3 rounded-card border border-surface-border bg-background/90 px-4 py-2.5 backdrop-blur">
+          <p className="text-sm text-muted" aria-live="polite">
+            {artists === null ? "Loading…" : review.length > 0 ? `${review.length} to confirm first` : `${count} artist${count === 1 ? "" : "s"} ready${mustSee ? ` · ${mustSee} must-see` : ""}`}
+          </p>
+          {manage ? (
+            <a href="/profile" className="rounded-card bg-accent px-5 py-2 text-sm font-bold text-accent-foreground">Done, back to profile</a>
+          ) : (
+            <button onClick={() => saveStep(3)} disabled={!canConfirm} className="rounded-card bg-accent px-5 py-2 text-sm font-bold text-accent-foreground disabled:opacity-50">
+              Confirm and continue
+            </button>
+          )}
+        </div>
+      )}
 
       {notice && (
         <p role="status" className={`rounded-card border px-4 py-3 text-sm ${notice.tone === "error" ? "border-urgency-red/60" : notice.tone === "ok" ? "border-emerald-500/60" : "border-surface-border"}`}>
@@ -230,7 +252,7 @@ export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, manage }:
         </p>
       )}
 
-      {step <= 2 && (
+      {step === 1 && (
         <>
       <ReviewTray
         items={review}
@@ -326,7 +348,7 @@ export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, manage }:
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
           <h2 className="font-display text-3xl font-extrabold">Your artists</h2>
-          {step === 2 && <p className="text-xs text-muted">Tap a card to cycle Follow → Must-see → Muted</p>}
+          <p className="text-xs text-muted">Tap a card to cycle Follow → Must-see → Muted</p>
         </div>
         {artists === null && !loadError && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-busy="true">
@@ -366,29 +388,18 @@ export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, manage }:
           <a href="/profile" className="rounded-card bg-accent px-5 py-2.5 font-bold text-accent-foreground">Done, back to profile</a>
         </footer>
       )}
-      {!manage && <footer className="flex items-center justify-between gap-3 border-t border-surface-border pt-4">
-        {step === 2 ? (
-          <button onClick={() => saveStep(1)} className="text-sm text-muted underline underline-offset-2">Back</button>
-        ) : (
-          <span />
-        )}
-        {step === 1 ? (
-          <button onClick={() => saveStep(2)} disabled={count === 0} className="rounded-card bg-accent px-5 py-2.5 font-medium text-accent-foreground disabled:opacity-50">
-            Next: confirm
+      {!manage && (
+        <footer className="flex flex-col items-end gap-1 border-t border-surface-border pt-4">
+          <button onClick={() => saveStep(3)} disabled={!canConfirm} className="rounded-card bg-accent px-6 py-3 font-bold text-accent-foreground disabled:opacity-50">
+            Confirm artists and continue
           </button>
-        ) : (
-          <div className="flex flex-col items-end gap-1">
-            <button onClick={() => saveStep(3)} disabled={review.length > 0 || count === 0} className="rounded-card bg-accent px-5 py-2.5 font-medium text-accent-foreground disabled:opacity-50">
-              Next: cities
-            </button>
-            {review.length > 0 && <p className="text-xs text-muted">Resolve or remove the {review.length} unconfirmed first.</p>}
-          </div>
-        )}
-      </footer>}
+          {review.length > 0 && <p className="text-xs text-muted">Resolve or remove the {review.length} unconfirmed first.</p>}
+        </footer>
+      )}
         </>
       )}
       {importing && <ConnectOverlay phase="importing" />}
-      {step === 3 && <CitiesStep onBack={() => saveStep(2)} onNext={() => saveStep(4)} />}
+      {step === 3 && <CitiesStep onBack={() => saveStep(1)} onNext={() => saveStep(4)} />}
       {step === 4 && <AlertsStep onBack={() => saveStep(3)} />}
     </div>
   );
