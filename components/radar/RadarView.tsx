@@ -21,12 +21,23 @@ const monthKey = (d: string | null) => (d ? d.slice(0, 7) : "tbd");
 const monthLabel = (k: string) => (k === "tbd" ? "Date to be announced" : new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${k}-01T00:00:00Z`)));
 
 // Shared by the dashboard (editable) and /demo (read-only).
-export function RadarView({ events: initial, homeCity, readOnly, sourceCount, lastScanAt, hasArtists = true }: { events: EventView[]; homeCity: string; readOnly?: boolean; sourceCount: number; lastScanAt: string | null; hasArtists?: boolean }) {
-  const { events, mark, dismiss, toggleCalendar, toast, clearToast } = useEventActions(initial, { returnTo: "/radar" });
+export function RadarView({ events: initial, liveElsewhere = [], homeCity, readOnly, sourceCount, lastScanAt, hasArtists = true }: { events: EventView[]; liveElsewhere?: EventView[]; homeCity: string; readOnly?: boolean; sourceCount: number; lastScanAt: string | null; hasArtists?: boolean }) {
+  const { events, mark, dismiss, toggleCalendar, notify, toast, clearToast } = useEventActions(initial, { returnTo: "/radar" });
   const [chip, setChip] = useState<Chip>("india");
   const [limit, setLimit] = useState(12);
 
   const act = events.filter((e) => e.stage === "live").slice(0, 8);
+  const [followed, setFollowed] = useState<Set<string>>(new Set());
+  const mineIds = new Set(events.map((e) => e.id));
+  const elsewhere = liveElsewhere.filter((e) => !mineIds.has(e.id) && !followed.has(e.artistId)).slice(0, 6);
+
+  async function follow(artistId: string) {
+    const r = await fetch("/api/artists/suggested", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artistId }) }).catch(() => null);
+    if (r?.ok) {
+      setFollowed((f) => new Set(f).add(artistId));
+      notify("Following. Their shows will show up on your radar and in your alerts.");
+    } else notify("Couldn't follow that artist. Try again.", "error");
+  }
   const filtered = useMemo(() => events.filter((e) => (chip === "home" ? e.inHomeCity : chip === "festivals" ? e.isFestival : chip === "rumors" ? e.status === "rumored" : true)), [events, chip]);
   const groups = useMemo(() => {
     const m = new Map<string, EventView[]>();
@@ -51,18 +62,34 @@ export function RadarView({ events: initial, homeCity, readOnly, sourceCount, la
         </section>
       ) : (
         <>
-          {act.length > 0 && (
-            <section aria-labelledby="act" className="space-y-3">
-              <h2 id="act" className="font-display text-3xl font-extrabold"><span className="text-stage-live">●</span> On sale now</h2>
-              <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
-                {act.map((e, i) => (
-                  <li key={e.id} className="w-[min(88vw,24rem)] shrink-0 snap-start">
-                    <EventCard ev={e} onDismiss={dismiss} onMark={mark} onCalendar={toggleCalendar} readOnly={readOnly} auto={i === 0} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <section aria-labelledby="act" className="space-y-3">
+            <h2 id="act" className="font-display text-3xl font-extrabold"><span className="text-stage-live">●</span> On sale now</h2>
+            {act.length > 0 && (
+              <>
+                {elsewhere.length > 0 && <p className="text-sm text-muted">From your artists</p>}
+                <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+                  {act.map((e) => (
+                    <li key={e.id} className="w-[min(88vw,24rem)] shrink-0 snap-start">
+                      <EventCard ev={e} onDismiss={dismiss} onMark={mark} onCalendar={toggleCalendar} readOnly={readOnly} auto />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {act.length === 0 && <p className="rounded-card border border-dashed border-surface-border p-4 text-sm text-muted">None of your artists has tickets on sale right now. We&apos;ll alert you the moment one does.{elsewhere.length > 0 ? " Meanwhile, here is what is live across India." : ""}</p>}
+            {elsewhere.length > 0 && (
+              <>
+                {act.length > 0 && <p className="pt-2 text-sm text-muted">Also on sale across India</p>}
+                <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+                  {elsewhere.map((e) => (
+                    <li key={e.id} className="w-[min(88vw,24rem)] shrink-0 snap-start">
+                      <EventCard ev={e} onCalendar={toggleCalendar} onFollow={follow} readOnly={readOnly} auto />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
 
           <section aria-labelledby="timeline" className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -97,7 +124,7 @@ export function RadarView({ events: initial, homeCity, readOnly, sourceCount, la
                   <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {list.map((e) => (
                       <li key={e.id}>
-                        <EventCard ev={e} onDismiss={dismiss} onMark={mark} onCalendar={toggleCalendar} readOnly={readOnly} />
+                        <EventCard ev={e} onDismiss={dismiss} onMark={mark} onCalendar={toggleCalendar} readOnly={readOnly} auto />
                       </li>
                     ))}
                   </ul>

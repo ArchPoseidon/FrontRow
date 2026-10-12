@@ -62,7 +62,8 @@ export function useEventActions(initial: EventView[], opts: { returnTo: string }
     }
   };
 
-  return { events, setEvents, mark, dismiss, toggleCalendar, toast, clearToast: () => setToast(null) };
+  const notify = (text: string, tone: "ok" | "error" = "ok") => setToast({ text, tone });
+  return { events, setEvents, mark, dismiss, toggleCalendar, notify, toast, clearToast: () => setToast(null) };
 }
 
 export function ToastView({ toast, onClose }: { toast: Toast; onClose: () => void }) {

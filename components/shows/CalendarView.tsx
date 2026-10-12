@@ -142,7 +142,7 @@ export function CalendarView({ events: initial, today }: { events: EventView[]; 
 
       {sel ? (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {dayList.map((e) => <li key={e.id}><EventCard ev={e} onMark={mark} onCalendar={toggleCalendar} /></li>)}
+          {dayList.map((e) => <li key={e.id}><EventCard ev={e} onMark={mark} onCalendar={toggleCalendar} auto /></li>)}
         </ul>
       ) : shown.length === 0 ? (
         <p className="rounded-card border border-dashed border-surface-border p-6 text-center text-sm text-muted">

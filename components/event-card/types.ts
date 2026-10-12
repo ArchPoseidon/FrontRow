@@ -32,6 +32,7 @@ export type EventView = {
   dismissed?: boolean;
   mine?: "going" | "saved" | null; // the viewer's own mark
   concertImage?: string | null; // a photo from this artist's own concert, when we have one
+  notFollowed?: boolean; // shown only because tickets are live; the viewer does not follow this artist yet
   inCalendar?: boolean; // added to the viewer's calendar
   artistGenres?: string[];
 };

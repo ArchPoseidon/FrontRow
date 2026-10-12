@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
 import { computeUrgency } from "@/lib/brain/urgency";
 import { displayCity, normalizeCity } from "@/lib/util/city";
@@ -37,14 +37,33 @@ export function reasonAndCountdown(e: Pick<EventRow, "status" | "saleOpensAt">, 
 export type Viewer = { userId: string; homeCity: string | null; watchCities: string[] | null };
 
 // Upcoming real events for a viewer's non-muted artists, with urgency computed for that viewer.
-export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDismissed?: boolean } = {}): Promise<EventView[]> {
+// `elsewhere`: instead of the viewer's own artists, shows on sale right now for artists they do not follow yet
+// (real, sourced events), so a new user's "On sale now" is never empty.
+export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDismissed?: boolean; elsewhere?: { limit: number } } = {}): Promise<EventView[]> {
   const today = todayIST();
-  const rows = await db
-    .select({ e: schema.events, a: schema.artists, priority: schema.userArtists.priority })
-    .from(schema.events)
-    .innerJoin(schema.artists, eq(schema.artists.id, schema.events.artistId))
-    .innerJoin(schema.userArtists, and(eq(schema.userArtists.artistId, schema.artists.id), eq(schema.userArtists.userId, viewer.userId)))
-    .where(and(ne(schema.userArtists.priority, "muted"), ne(schema.events.status, "cancelled"), or(isNull(schema.events.eventDate), gte(schema.events.eventDate, today)), eq(schema.events.isSample, false)));
+  const base = and(ne(schema.events.status, "cancelled"), or(isNull(schema.events.eventDate), gte(schema.events.eventDate, today)), eq(schema.events.isSample, false));
+  let rows: { e: typeof schema.events.$inferSelect; a: typeof schema.artists.$inferSelect; priority: string | null }[];
+  if (opts.elsewhere) {
+    const mine = (await db.select({ id: schema.userArtists.artistId }).from(schema.userArtists).where(eq(schema.userArtists.userId, viewer.userId))).map((r) => r.id);
+    const live = sql`(${schema.events.status} in ('early_bird','on_sale') or exists (select 1 from event_tiers t where t.event_id = ${schema.events.id} and t.status = 'open'))`;
+    const picked = await db
+      .select({ e: schema.events, a: schema.artists })
+      .from(schema.events)
+      .innerJoin(schema.artists, eq(schema.artists.id, schema.events.artistId))
+      .where(and(base, live, inArray(schema.events.ticketStatus, ["exact", "ok"]), mine.length ? notInArray(schema.artists.id, mine) : undefined))
+      .orderBy(schema.events.eventDate)
+      .limit(opts.elsewhere.limit * 3);
+    // One show per artist, soonest first.
+    const seen = new Set<string>();
+    rows = picked.filter((r) => (seen.has(r.a.id) ? false : (seen.add(r.a.id), true))).slice(0, opts.elsewhere.limit).map((r) => ({ ...r, priority: "follow" }));
+  } else {
+    rows = await db
+      .select({ e: schema.events, a: schema.artists, priority: schema.userArtists.priority })
+      .from(schema.events)
+      .innerJoin(schema.artists, eq(schema.artists.id, schema.events.artistId))
+      .innerJoin(schema.userArtists, and(eq(schema.userArtists.artistId, schema.artists.id), eq(schema.userArtists.userId, viewer.userId)))
+      .where(and(ne(schema.userArtists.priority, "muted"), base));
+  }
   if (!rows.length) return [];
   const ids = rows.map((r) => r.e.id);
   const [tiers, srcs, dismissed, cal] = await Promise.all([
@@ -66,7 +85,7 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
     const mySrc = visibleSources(srcs.filter((s) => s.eventId === e.id));
     const distinct = new Set(mySrc.map((s) => (s.platform ?? new URL(s.url).hostname).toLowerCase()));
     const urgency = computeUrgency({ ...e, ticketUrl: ticketLinkOf(e), sourceCount: distinct.size, tiers: my }, { homeCity: viewer.homeCity, watchCities: viewer.watchCities, priority });
-    if (!urgency) continue; // a city this viewer does not watch
+    if (!urgency && !opts.elsewhere) continue; // a city this viewer does not watch
     const isDismissed = dis.has(e.id);
     if (isDismissed && !opts.includeDismissed) continue;
     const { reason, countdown } = reasonAndCountdown(e, my);
@@ -89,7 +108,7 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
       tiers: my.map((t): TierView => ({ name: t.name, priceInr: t.priceInr, status: t.status as TierView["status"], opensAt: t.opensAt?.toISOString() ?? null, closesAt: t.closesAt?.toISOString() ?? null })),
       saleOpensAt: e.saleOpensAt?.toISOString() ?? null,
       sources: mySrc.map((s) => ({ url: s.url, platform: s.platform })),
-      urgency,
+      urgency: urgency ?? "info",
       stage: stageOf({ status: e.status, saleOpensAt: e.saleOpensAt, tiers: my, confirmed: isConfirmed(e.confidence, distinct.size) }),
       reason,
       countdown,
@@ -97,6 +116,7 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
       dismissed: isDismissed,
       mine: marks.get(e.id) ?? null,
       inCalendar: inCal.has(e.id),
+      notFollowed: !!opts.elsewhere,
     });
   }
   const rank = { red: 0, amber: 1, info: 2 } as const;

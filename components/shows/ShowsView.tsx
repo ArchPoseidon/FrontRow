@@ -36,7 +36,7 @@ export function ShowsView({ events: initial }: { events: EventView[] }) {
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {list.map((e) => (
             <li key={e.id}>
-              <EventCard ev={e} onMark={mark} onCalendar={toggleCalendar} />
+              <EventCard ev={e} onMark={mark} onCalendar={toggleCalendar} auto />
             </li>
           ))}
         </ul>

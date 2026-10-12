@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArtistPhoto } from "@/components/artist/ArtistPhoto";
 import Image from "next/image";
 import { cardConcert } from "@/lib/concert";
@@ -38,6 +38,7 @@ export function EventCard({
   onDismiss,
   onMark,
   onCalendar,
+  onFollow,
   readOnly,
   auto,
 }: {
@@ -46,16 +47,36 @@ export function EventCard({
   onDismiss?: (id: string) => void;
   onMark?: (id: string, mark: Mark) => void;
   onCalendar?: (id: string) => void;
+  onFollow?: (artistId: string) => void;
   readOnly?: boolean;
   auto?: boolean;
 }) {
   const [f, setF] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(false); // the viewer took over by tapping
+  const [hover, setHover] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const ref = useRef<HTMLElement>(null);
+  // Cards flip on their own while on screen, each on its own beat so a grid never flips in lockstep.
   useEffect(() => {
-    if (!auto || paused) return;
-    const t = setInterval(() => setF((x) => (x + 1) % FACES.length), 3200);
-    return () => clearInterval(t);
-  }, [auto, paused]);
+    if (!auto || !ref.current) return;
+    const io = new IntersectionObserver(([en]) => setVisible(en.isIntersecting), { rootMargin: "120px" });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [auto]);
+  useEffect(() => {
+    if (!auto || paused || hover || !visible) return;
+    let h = 0;
+    for (const ch of ev.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = setTimeout(() => {
+      setF((x) => (x + 1) % FACES.length);
+      timer = setInterval(() => setF((x) => (x + 1) % FACES.length), 3600);
+    }, 600 + (h % 3000));
+    return () => {
+      clearTimeout(start);
+      if (timer) clearInterval(timer);
+    };
+  }, [auto, paused, hover, visible, ev.id]);
 
   const p = dateParts(ev.date);
   const rumor = ev.status === "rumored";
@@ -70,7 +91,7 @@ export function EventCard({
   };
 
   return (
-    <article className={`flex flex-col overflow-hidden rounded-card border-2 bg-surface ${BORDER[ev.stage]} ${rumor ? "border-dashed" : ""}`} aria-label={`${ev.artistName}${ev.city ? `, ${ev.city}` : ""}`}>
+    <article ref={ref} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} className={`flex flex-col overflow-hidden rounded-card border-2 bg-surface ${BORDER[ev.stage]} ${rumor ? "border-dashed" : ""}`} aria-label={`${ev.artistName}${ev.city ? `, ${ev.city}` : ""}`}>
       <div className={`flex flex-wrap items-center justify-between gap-x-3 px-3 py-1.5 text-xs font-bold tracking-wide uppercase ${BAND[ev.stage]}`}>
         <span>{ev.isSample ? "Sample · " : ""}{STAGE_LABEL[ev.stage]}</span>
         {!(ev.stage === "announced" && /^Announced/.test(ev.reason)) && <span className="font-semibold normal-case">{ev.reason}</span>}
@@ -158,7 +179,10 @@ export function EventCard({
           </a>
         )}
         {!rumor && !ev.ticketUrl && <span className="text-xs text-muted">Ticket page not confirmed yet</span>}
-        {!readOnly && onMark && (
+        {ev.notFollowed && !readOnly && onFollow && (
+          <button onClick={() => onFollow(ev.artistId)} className="rounded-card border border-[var(--magenta)] px-3 py-2 text-sm font-bold text-[var(--magenta)]">+ Follow {ev.artistName}</button>
+        )}
+        {!readOnly && onMark && !ev.notFollowed && (
           <>
             <button onClick={() => onMark(ev.id, ev.mine === "going" ? null : "going")} aria-pressed={ev.mine === "going"} className={`rounded-card border px-3 py-2 text-sm ${ev.mine === "going" ? "border-[var(--tier-open)] bg-[var(--tier-open)] font-bold text-black" : "border-surface-border"}`}>
               {ev.mine === "going" ? "Going ✓" : "Going"}
