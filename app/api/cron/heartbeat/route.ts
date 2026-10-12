@@ -48,7 +48,9 @@ export async function GET(req: Request) {
     const refused = runs.filter((r) => r.job === "spotify-connect");
     if (refused.length) lines.push(`🟠 Spotify refused ${refused.length} connection${refused.length === 1 ? "" : "s"} in 24h (the account probably is not on the Spotify app's user list). ${esc(String((refused[0].errors as string[] | null)?.[0] ?? "").slice(0, 100))}`);
     for (const s of bad) lines.push(`🔴 ${esc(s.name)}: ${esc((s.lastError ?? (s.enabled ? "failing" : "disabled")).slice(0, 80))}`);
-    const chatId = owner?.telegramChatId;
+    // A Telegram chat can be linked to one account at a time, so the owner's report is pinned to a fixed chat when
+    // OWNER_TELEGRAM_CHAT_ID is set; otherwise it uses the owner account's linked chat.
+    const chatId = process.env.OWNER_TELEGRAM_CHAT_ID ? Number(process.env.OWNER_TELEGRAM_CHAT_ID) : owner?.telegramChatId;
     if (!chatId) {
       await finishRun(db, run, { errors: ["owner has no Telegram chat linked"] });
       return Response.json({ ok: false, error: "Owner has no Telegram chat linked" });

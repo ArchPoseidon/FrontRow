@@ -134,7 +134,7 @@ export async function verifyBatch(db: Db, eventIds: string[], o: { maxEvents?: n
   const started = Date.now();
   const rows = await db.select({ id: schema.events.id, s: schema.events.ticketStatus }).from(schema.events).where(inArray(schema.events.id, eventIds));
   const todo = rows.filter((r) => r.s === "unchecked" || r.s === null).slice(0, o.maxEvents ?? 12);
-  let budget = Math.max(0, dailyCap() - (await creditsUsedToday(db)));
+  const budget = Math.max(0, dailyCap() - (await creditsUsedToday(db)));
   let spent = 0;
   await mapLimit(todo, 3, async (r) => {
     if (Date.now() - started > (o.timeMs ?? 25_000)) return;

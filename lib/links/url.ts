@@ -23,10 +23,14 @@ export const hostOf = (url: string) => {
   }
 };
 
-// A homepage, a bare listing or a social profile is not "the exact page" for one show.
+// Link-in-bio pages list everything an artist links to; they are never the exact page for one show.
+const AGGREGATORS = /(^|\.)(linktr\.ee|linktree\.com|linkin\.bio|beacons\.ai|bio\.link|lnk\.bio|solo\.to|campsite\.bio|taplink\.cc|linkpop\.com|many\.link|allmylinks\.com|tap\.bio|link\.tree|carrd\.co|stan\.store|fanlink\.to|ffm\.to|smarturl\.it|orcd\.co|lnk\.to)$/i;
+
+// A homepage, a bare listing, a link-in-bio page or a social profile is not "the exact page" for one show.
 export function isGenericUrl(raw: string): boolean {
   try {
     const u = new URL(raw);
+    if (AGGREGATORS.test(u.hostname)) return true;
     const segs = u.pathname.split("/").filter(Boolean).filter((s) => !/^[a-z]{2}(-[a-z]{2})?$/i.test(s)); // drop /en, /en-in
     if (segs.length === 0) return true;
     if (SOCIAL.test(u.hostname)) {

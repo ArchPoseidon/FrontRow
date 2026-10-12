@@ -45,7 +45,8 @@ async function handleMessage(db: Db, chatId: number, text: string) {
     }
     const [u] = await db.select().from(schema.users).where(eq(schema.users.telegramLinkCode, arg));
     if (!u) return sendMessage(chatId, "That link has expired. Open FrontRow and tap “Connect Telegram” again to get a fresh one.");
-    // A chat belongs to one account.
+    // A chat belongs to one account: linking it here unlinks it from any other FrontRow account (said out loud below).
+    const [prev] = await db.select({ email: schema.users.email, id: schema.users.id }).from(schema.users).where(eq(schema.users.telegramChatId, chatId));
     await db.update(schema.users).set({ telegramChatId: null }).where(eq(schema.users.telegramChatId, chatId));
     await db.update(schema.users).set({ telegramChatId: chatId, telegramLinkCode: null, telegramEnabled: true }).where(eq(schema.users.id, u.id));
     // Linked: queue Telegram alerts for everything already found for this user's artists and send the first ones now,
@@ -61,7 +62,7 @@ async function handleMessage(db: Db, chatId: number, text: string) {
         console.error("first alerts after link", e);
       }
     });
-    return sendMessage(chatId, `✅ Linked${u.name ? `, ${esc(u.name.split(" ")[0])}` : ""}! Sending your first alerts now, then I'll message you the moment one of your artists announces a show in India.\n\n${HELP}`);
+    return sendMessage(chatId, `✅ Linked${u.name ? `, ${esc(u.name.split(" ")[0])}` : ""}! ${prev && prev.id !== u.id ? "This chat was linked to another FrontRow account; it now belongs to this one.\n" : ""}Sending your first alerts now, then I'll message you the moment one of your artists announces a show in India.\n\n${HELP}`);
   }
 
   const user = await userByChat(db, chatId);

@@ -12,7 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "scripts/**", // one-off operator scripts
   ]),
+  {
+    // Loading data when a screen mounts (fetch, then set state) is intentional here.
+    rules: { "react-hooks/set-state-in-effect": "off" },
+  },
 ]);
 
 export default eslintConfig;
