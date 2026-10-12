@@ -4,6 +4,7 @@ import { cronAuthorized, forbidden } from "@/lib/jobs";
 import { creditsUsedToday, dailyCap } from "@/lib/firecrawl";
 import { monthlyCap as sdMonthly, scrapedoUsed } from "@/lib/scrapedo";
 import { esc, sendMessage } from "@/lib/notify/telegram";
+import { appUrl, emailConfigured, sendEmail } from "@/lib/notify/email";
 import { finishRun, startRun } from "@/lib/collectors/shared";
 
 export const maxDuration = 60;
@@ -53,6 +54,13 @@ export async function GET(req: Request) {
       return Response.json({ ok: false, error: "Owner has no Telegram chat linked" });
     }
     await sendMessage(chatId, lines.join("\n"));
+    // The same report by email, to the owner's address only (OWNER_EMAIL). Nobody else ever receives it.
+    const ownerEmail = process.env.OWNER_EMAIL;
+    if (ownerEmail && emailConfigured()) {
+      const text = lines.join("\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+      const html = `<div style="font-family:system-ui,sans-serif;max-width:520px;line-height:1.6">${text.split("\n").map((l, i) => (i === 0 ? `<h2 style="margin:0 0 8px">${l}</h2>` : `<div>${l.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</div>`)).join("")}</div>`;
+      await sendEmail(ownerEmail, "FrontRow daily heartbeat", html, text, `${appUrl()}/profile`).catch((e) => console.error("heartbeat email", e));
+    }
     await finishRun(db, run, { alertsSent: 1 });
     return Response.json({ ok: true, lines });
   } catch (e) {
