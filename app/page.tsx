@@ -8,6 +8,7 @@ import { getDb, schema } from "@/lib/db";
 import { getEventView, getPublicCounters } from "@/lib/data/radar";
 import { todayIST } from "@/lib/util/ist";
 import { EventCard } from "@/components/event-card/EventCard";
+import { GoogleMark } from "@/components/icons/BrandIcons";
 
 const STEPS = [
   { n: "1", t: "Tell us who you love", d: "Connect Spotify, search, or paste a list. Every artist is matched to the right person, with a photo." },
@@ -28,7 +29,10 @@ async function Buttons({ searchParams }: { searchParams: Promise<{ signin?: stri
             await signIn("google", { redirectTo: "/radar" });
           }}
         >
-          <button type="submit" className="rounded-card bg-accent px-7 py-3.5 text-base font-bold text-accent-foreground transition hover:brightness-95">Continue with Google</button>
+          <button type="submit" className="flex items-center gap-3 rounded-card bg-accent px-6 py-3.5 text-base font-bold text-accent-foreground transition hover:brightness-95">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white"><GoogleMark size={18} /></span>
+            Continue with Google
+          </button>
         </form>
         <Link href="/demo" className="rounded-card border border-white/40 bg-black/30 px-7 py-3.5 text-base font-bold backdrop-blur transition hover:bg-black/50">See a live demo</Link>
       </div>

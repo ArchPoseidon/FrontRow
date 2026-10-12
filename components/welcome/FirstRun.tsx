@@ -144,7 +144,13 @@ export function FirstRun() {
 
       {summary && (
         <>
-          <p className="text-lg font-medium">{summary.headline}</p>
+          {/* Same button at the top, so a long list never has to be scrolled to continue */}
+          <div className="sticky top-2 z-20 flex flex-wrap items-center justify-between gap-3 rounded-card border border-surface-border bg-background/90 px-4 py-3 backdrop-blur">
+            <p className="min-w-0 flex-1 text-base font-medium sm:text-lg">{summary.headline}</p>
+            <Link href="/radar" className="shrink-0 rounded-card bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground">
+              Continue to my radar
+            </Link>
+          </div>
           {summary.shows.length > 0 && (
             <ul className="space-y-3">
               {summary.shows.map((s) => (
@@ -202,7 +208,7 @@ export function FirstRun() {
           )}
           {summary.deepCheckLater > 0 && <p className="text-sm text-muted">Deep check for {summary.deepCheckLater} more artist{summary.deepCheckLater === 1 ? "" : "s"} runs tonight.</p>}
           <Link href="/radar" className="self-start rounded-card bg-accent px-5 py-2.5 font-medium text-accent-foreground">
-            Go to my radar
+            Continue to my radar
           </Link>
         </>
       )}
