@@ -26,7 +26,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return j as T;
 }
 
-export function ArtistsStep({ initialStep, spotifyFlag, manage }: { initialStep: number; spotifyFlag?: string; manage?: boolean }) {
+export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, manage }: { initialStep: number; spotifyFlag?: string; spotifyCounts?: { followed: number; top: number }; manage?: boolean }) {
   // Right after Spotify sends the user back with imported artists, play the importing animation for a beat.
   const [importing, setImporting] = useState(spotifyFlag === "imported");
   useEffect(() => {
@@ -38,7 +38,17 @@ export function ArtistsStep({ initialStep, spotifyFlag, manage }: { initialStep:
   const [artists, setArtists] = useState<MyArtist[] | null>(null);
   const [review, setReview] = useState<ReviewItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<Notice>(spotifyFlag ? SPOTIFY_NOTICES[spotifyFlag] ?? null : null);
+  const [notice, setNotice] = useState<Notice>(() => {
+    if (!spotifyFlag) return null;
+    if (spotifyFlag === "imported" && spotifyCounts) {
+      const { followed, top } = spotifyCounts;
+      const parts = [`${followed} followed`, `${top} top`].join(" and ");
+      return top === 0 && followed === 0
+        ? { tone: "info", text: "Spotify connected, but it returned no followed or top artists yet. New accounts have little listening history. Search or paste a few artists to get started." }
+        : { tone: top === 0 ? "info" : "ok", text: `Imported ${parts} artists from Spotify.${top === 0 ? " Spotify returned no top artists yet (they build up with listening history)." : ""}` };
+    }
+    return SPOTIFY_NOTICES[spotifyFlag] ?? null;
+  });
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Candidate[] | null>(null);
   const [searching, setSearching] = useState(false);

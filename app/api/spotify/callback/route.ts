@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { schema } from "@/lib/db";
+import { finishRun, startRun } from "@/lib/collectors/shared";
 import { requireUser } from "@/lib/session";
 import { exchangeCode, getMe, SpotifyError } from "@/lib/identity/spotify";
 import { importFromSpotify } from "@/lib/identity/spotify-import";
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
   })();
   jar.delete("sp_state");
   const url = new URL(req.url);
-  const back = (flag: string) => NextResponse.redirect(new URL(`${saved?.next ?? "/onboarding"}?spotify=${flag}`, base));
+  const back = (flag: string, extra = "") => NextResponse.redirect(new URL(`${saved?.next ?? "/onboarding"}?spotify=${flag}${extra}`, base));
 
   if (!saved || saved.state !== url.searchParams.get("state")) return back("error");
   if (url.searchParams.get("error")) return back("denied");
@@ -46,6 +47,10 @@ export async function GET(req: Request) {
     };
     await ctx.db.insert(schema.spotifyConnections).values(values).onConflictDoUpdate({ target: schema.spotifyConnections.userId, set: values });
   } catch (e) {
+    // Keep a trace: a refused connection (usually an account that is not on the Spotify app's user list) shows in the daily heartbeat.
+    const status = e instanceof SpotifyError ? e.status : 0;
+    const run = await startRun(ctx.db, "spotify-connect").catch(() => null);
+    if (run) await finishRun(ctx.db, run, { errors: [`Spotify refused the connection (${status}) for ${ctx.user.email}`] }).catch(() => {});
     return back(e instanceof SpotifyError && e.status === 403 ? "invite_only" : "error");
   }
 
@@ -57,5 +62,5 @@ export async function GET(req: Request) {
     await startBackgroundScan(ctx.db, ctx.user.id).catch((e) => console.error("background scan", e));
     await enrichArtists(ctx.db, r.newArtistIds);
   });
-  return back("imported");
+  return back("imported", `&f=${r.followed}&t=${r.top}`);
 }

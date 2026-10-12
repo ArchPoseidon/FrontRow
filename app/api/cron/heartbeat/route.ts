@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     const bad = sources.filter((s) => !s.enabled || (s.consecutiveFailures ?? 0) > 0 || s.lastError);
     const ok = sources.length - bad.length;
     const never = sources.filter((s) => !s.lastOkAt && s.enabled).length;
-    const real = runs.filter((r) => r.job !== "scrapedo");
+    const real = runs.filter((r) => r.job !== "scrapedo" && r.job !== "spotify-connect");
     const jobsRan = new Set(real.map((r) => r.job.replace(/^scan-now:.*/, "scan-now"))).size;
     const lc = Object.fromEntries(links.map((l) => [l.s ?? "unchecked", l.n]));
     const lines = [
@@ -44,6 +44,8 @@ export async function GET(req: Request) {
     ];
     if (spotify?.spotify_connections?.broken) lines.push("🔴 Spotify connection is broken: reconnect it in Setup");
     if (!real.length) lines.push("🔴 No jobs ran in the last 24 hours. Check cron-job.org");
+    const refused = runs.filter((r) => r.job === "spotify-connect");
+    if (refused.length) lines.push(`🟠 Spotify refused ${refused.length} connection${refused.length === 1 ? "" : "s"} in 24h (the account probably is not on the Spotify app's user list). ${esc(String((refused[0].errors as string[] | null)?.[0] ?? "").slice(0, 100))}`);
     for (const s of bad) lines.push(`🔴 ${esc(s.name)}: ${esc((s.lastError ?? (s.enabled ? "failing" : "disabled")).slice(0, 80))}`);
     const chatId = owner?.telegramChatId;
     if (!chatId) {

@@ -180,7 +180,22 @@ export async function fetchFollowedArtists(token: string, max = 100): Promise<Ca
   return out.slice(0, max);
 }
 
-export async function fetchTopArtists(token: string, max = 50): Promise<Candidate[]> {
-  const j = await spFetch<{ items: SpArtist[] }>(`/me/top/artists?limit=${Math.min(max, 50)}&time_range=medium_term`, token);
-  return j.items.map(toCandidate);
+// Spotify's "top artists" depends on recent listening: medium_term (about 6 months) can be nearly empty for a light or
+// new listener, while long_term still has plenty. Read all three windows and merge them, longest history first.
+export async function fetchTopArtists(token: string, max = 100): Promise<Candidate[]> {
+  const ranges = ["long_term", "medium_term", "short_term"] as const;
+  const lists = await Promise.all(
+    ranges.map((range) =>
+      spFetch<{ items: SpArtist[] }>(`/me/top/artists?limit=50&time_range=${range}`, token)
+        .then((j) => j.items.map(toCandidate))
+        .catch((e) => {
+          if (e instanceof SpotifyError && e.status === 403) throw e;
+          return [] as Candidate[]; // one window failing must not lose the others
+        }),
+    ),
+  );
+  const seen = new Set<string>();
+  const out: Candidate[] = [];
+  for (const c of lists.flat()) if (c.spotifyId && !seen.has(c.spotifyId)) (seen.add(c.spotifyId), out.push(c));
+  return out.slice(0, max);
 }

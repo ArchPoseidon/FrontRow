@@ -5,14 +5,14 @@ import { auth } from "@/auth";
 import { getDb, schema } from "@/lib/db";
 import { ArtistsStep } from "@/components/onboarding/ArtistsStep";
 
-type SearchParams = Promise<{ spotify?: string; manage?: string }>;
+type SearchParams = Promise<{ spotify?: string; manage?: string; f?: string; t?: string }>;
 
 async function Loaded({ searchParams }: { searchParams: SearchParams }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
-  const { spotify, manage } = await searchParams;
+  const { spotify, manage, f, t } = await searchParams;
   const [u] = await getDb().select({ step: schema.users.onboardingStep, done: schema.users.onboardedAt }).from(schema.users).where(eq(schema.users.id, session.user.id));
-  return <ArtistsStep initialStep={manage ? 1 : u?.done ? 2 : (u?.step ?? 0)} spotifyFlag={spotify} manage={!!manage} />;
+  return <ArtistsStep initialStep={manage ? 1 : u?.done ? 2 : (u?.step ?? 0)} spotifyFlag={spotify} spotifyCounts={spotify === "imported" ? { followed: Number(f) || 0, top: Number(t) || 0 } : undefined} manage={!!manage} />;
 }
 
 export default function Onboarding({ searchParams }: { searchParams: SearchParams }) {

@@ -68,3 +68,12 @@ Publishing the app to everyone later needs Google's verification review for the 
 ## Backup crawler
 
 Firecrawl is the main crawler (free credits, daily cap). When it is out of credits, rate-limited or failing, the app falls back to Scrape.do (`CRAWLER_API_KEY`, 1,000 free credits a month, capped at 900), then to Jina Reader. Usage shows in the daily heartbeat message.
+
+## Letting judges connect Spotify
+
+A Spotify app in development mode only lets people on its user list connect (up to 25). Anyone else sees "Spotify import is invite-only during beta" and can still search or paste artists.
+1. Open https://developer.spotify.com/dashboard and click the FrontRow app.
+2. Click **Settings**, then the **User Management** tab.
+3. Click **Add new user**, enter the person's **name** and the **email address their Spotify account uses** (it must match exactly), and click **Add user**. It works within a minute.
+4. The owner of the Spotify app must have Spotify Premium for development mode to stay active.
+Refused connections show in the 8:30 heartbeat message with the email that was refused.
