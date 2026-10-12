@@ -7,8 +7,11 @@ export const appUrl = () => (process.env.APP_URL ?? "http://localhost:3000").rep
 // Obtained once with `scripts/connect-gmail-sender.ts`; needs the gmail.send permission.
 const gmailApiReady = () => !!(process.env.GMAIL_REFRESH_TOKEN && process.env.GMAIL_SENDER && process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
+// Brevo (free tier, 300 emails a day): sends from a verified single sender address, no domain needed.
+const brevoReady = () => !!(process.env.BREVO_API_KEY && process.env.BREVO_SENDER);
+
 export function emailConfigured() {
-  if (gmailApiReady()) return true;
+  if (brevoReady() || gmailApiReady()) return true;
   if (process.env.EMAIL_PROVIDER === "resend") return !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
   return !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
 }
@@ -52,8 +55,19 @@ async function sendViaGmailApi(to: string, subject: string, html: string, text: 
   if (!r.ok) throw new Error(`Gmail API ${r.status}: ${(await r.text()).slice(0, 160)}`);
 }
 
+async function sendViaBrevo(to: string, subject: string, html: string, text: string, headers: Record<string, string>) {
+  const r = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": process.env.BREVO_API_KEY!, "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ sender: { name: "FrontRow", email: process.env.BREVO_SENDER }, to: [{ email: to }], subject, htmlContent: html, textContent: text, headers }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!r.ok) throw new Error(`Brevo ${r.status}: ${(await r.text()).slice(0, 200)}`);
+}
+
 export async function sendEmail(to: string, subject: string, html: string, text: string, unsubscribe: string) {
-  const headers = { "List-Unsubscribe": `<${unsubscribe}>` };
+  const headers = { "List-Unsubscribe": `<${unsubscribe}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" };
+  if (brevoReady()) return sendViaBrevo(to, subject, html, text, headers);
   if (gmailApiReady()) return sendViaGmailApi(to, subject, html, text, headers);
   if (process.env.EMAIL_PROVIDER === "resend") {
     const r = await fetch("https://api.resend.com/emails", {
