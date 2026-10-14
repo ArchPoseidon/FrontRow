@@ -1,13 +1,15 @@
 import { after } from "next/server";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNull, ne, or } from "drizzle-orm";
 import { getDb, schema, type Db } from "@/lib/db";
 import { answerCallback, editCaption, editText, esc, sendMessage } from "@/lib/notify/telegram";
-import { telegramButtons } from "@/lib/notify/caption";
+import { telegramButtons, ticketReplyText } from "@/lib/notify/caption";
 import { loadEventCard, showDay } from "@/lib/notify/content";
 import { appUrl } from "@/lib/notify/email";
 import { upcomingForUser } from "@/lib/brain/scan";
 import { normalizeName } from "@/lib/identity/normalize";
-import { dispatchAlerts } from "@/lib/notify/dispatch";
+import { deliverTelegram, dispatchAlerts } from "@/lib/notify/dispatch";
+import { verifyBatch } from "@/lib/brain/process";
+import { todayIST } from "@/lib/util/ist";
 import { decideForEvents } from "@/lib/brain/decide";
 import { loadWatched } from "@/lib/brain/match";
 import { collectArtistNews } from "@/lib/collectors/news";
@@ -22,6 +24,8 @@ type Update = {
 
 const HELP = [
   "<b>FrontRow</b> commands",
+  "/new – the newest shows for your artists",
+  "/tickets – ticket info for those shows (or /tickets &lt;artist&gt;)",
   "/upcoming – your next shows",
   "/artists – who you follow",
   "/mute &lt;artist&gt; – stop alerts for an artist",
@@ -31,6 +35,29 @@ const HELP = [
 async function userByChat(db: Db, chatId: number) {
   const [u] = await db.select().from(schema.users).where(eq(schema.users.telegramChatId, chatId));
   return u ?? null;
+}
+
+
+// The user's newest shows (first seen in the last `days` days), newest first. Falls back to the latest few overall.
+async function recentShows(db: Db, userId: string, limit: number, days = 7) {
+  const base = and(eq(schema.userArtists.userId, userId), ne(schema.userArtists.priority, "muted"), eq(schema.events.isSample, false), ne(schema.events.status, "cancelled"), or(isNull(schema.events.eventDate), gte(schema.events.eventDate, todayIST())));
+  const q = (extra?: ReturnType<typeof gte>) =>
+    db
+      .select({ id: schema.events.id })
+      .from(schema.events)
+      .innerJoin(schema.userArtists, eq(schema.userArtists.artistId, schema.events.artistId))
+      .where(extra ? and(base, extra) : base)
+      .orderBy(desc(schema.events.firstSeenAt))
+      .limit(limit);
+  const fresh = await q(gte(schema.events.firstSeenAt, new Date(Date.now() - days * 86400_000)));
+  if (fresh.length) return { ids: fresh.map((r) => r.id), fresh: true };
+  return { ids: (await q()).map((r) => r.id), fresh: false };
+}
+
+// Make sure the links are checked before we answer (a few seconds at most), then load the card.
+async function readyCard(db: Db, eventId: string) {
+  await verifyBatch(db, [eventId], { maxEvents: 1, timeMs: 12_000 }).catch(() => 0);
+  return loadEventCard(db, eventId);
 }
 
 async function handleMessage(db: Db, chatId: number, text: string) {
@@ -71,6 +98,42 @@ async function handleMessage(db: Db, chatId: number, text: string) {
   switch (cmd) {
     case "/help":
       return sendMessage(chatId, HELP);
+    case "/new": {
+      const { ids, fresh } = await recentShows(db, user.id, 5);
+      if (!ids.length) return sendMessage(chatId, "Nothing found for your artists yet. I'm watching and will message you the moment a show is announced.");
+      await sendMessage(chatId, fresh ? `<b>New for your artists</b> (last 7 days). Tap <b>Ticket info</b> under any show.` : "No new shows in the last 7 days. Here are the latest found for your artists. Tap <b>Ticket info</b> under any show.");
+      for (const id of ids) {
+        const ev = await readyCard(db, id);
+        if (!ev) continue;
+        const [al] = await db.select({ id: schema.alerts.id }).from(schema.alerts).where(and(eq(schema.alerts.userId, user.id), eq(schema.alerts.eventId, id), eq(schema.alerts.channel, "telegram"), eq(schema.alerts.kind, "new_show")));
+        await deliverTelegram(db, user, ev, "amber", al?.id ?? null).catch((e) => console.error("/new send", e));
+      }
+      return;
+    }
+    case "/tickets": {
+      let ids: string[];
+      if (arg) {
+        const n = normalizeName(arg);
+        const rows = await db
+          .select({ id: schema.events.id, name: schema.artists.normalizedName })
+          .from(schema.events)
+          .innerJoin(schema.artists, eq(schema.artists.id, schema.events.artistId))
+          .innerJoin(schema.userArtists, and(eq(schema.userArtists.artistId, schema.artists.id), eq(schema.userArtists.userId, user.id)))
+          .where(and(eq(schema.events.isSample, false), ne(schema.events.status, "cancelled"), or(isNull(schema.events.eventDate), gte(schema.events.eventDate, todayIST())), ilike(schema.artists.normalizedName, `%${n.replace(/[%_]/g, "")}%`)))
+          .orderBy(schema.events.eventDate)
+          .limit(4);
+        ids = rows.map((r) => r.id);
+        if (!ids.length) return sendMessage(chatId, `I don't see an upcoming show for “${esc(arg)}” among your artists. Try /new or /upcoming.`);
+      } else {
+        ids = (await recentShows(db, user.id, 3)).ids;
+        if (!ids.length) return sendMessage(chatId, "No shows found for your artists yet. I'll message you the moment one is announced.");
+      }
+      for (const id of ids) {
+        const ev = await readyCard(db, id);
+        if (ev) await sendMessage(chatId, ticketReplyText(ev, appUrl()), ev.ticketUrl ? [[{ text: "🎟 Open ticket page", url: ev.ticketUrl }]] : undefined);
+      }
+      return;
+    }
     case "/upcoming": {
       const shows = (await upcomingForUser(db, user.id, user.homeCity)).slice(0, 8);
       if (!shows.length) return sendMessage(chatId, "No upcoming India shows for your artists right now. I'm watching and will message you the moment one is announced.");
@@ -137,6 +200,16 @@ async function handleMessage(db: Db, chatId: number, text: string) {
 }
 
 async function handleCallback(db: Db, cq: NonNullable<Update["callback_query"]>) {
+  if ((cq.data ?? "").startsWith("tix:") && cq.message) {
+    // "Ticket info" under a show: answer in the chat with the checked ticket page, tiers and prices.
+    const chatId = cq.message.chat.id;
+    const user = await userByChat(db, chatId);
+    await answerCallback(cq.id, user ? "Getting the ticket info…" : "Link your account first");
+    if (!user) return;
+    const ev = await readyCard(db, (cq.data ?? "").slice(4));
+    if (!ev) return sendMessage(chatId, "That show is no longer available.");
+    return sendMessage(chatId, ticketReplyText(ev, appUrl()), ev.ticketUrl ? [[{ text: "🎟 Open ticket page", url: ev.ticketUrl }]] : undefined);
+  }
   const [action, alertId] = (cq.data ?? "").split(":");
   if (action === "noop" || !alertId || !cq.message) return answerCallback(cq.id);
   const chatId = cq.message.chat.id;

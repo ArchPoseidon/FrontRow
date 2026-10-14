@@ -8,6 +8,8 @@ async function main() {
   if (!url.startsWith("https://")) throw new Error("Pass an https URL (Telegram only calls https)");
   await tg("setWebhook", { url, secret_token: process.env.TELEGRAM_WEBHOOK_SECRET, allowed_updates: ["message", "callback_query"], drop_pending_updates: true });
   await tg("setMyCommands", { commands: [
+    { command: "new", description: "Newest shows for your artists" },
+    { command: "tickets", description: "Ticket info for those shows" },
     { command: "upcoming", description: "Your next shows" },
     { command: "artists", description: "Who you follow" },
     { command: "mute", description: "Mute an artist" },
