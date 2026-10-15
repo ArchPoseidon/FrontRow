@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>FrontRow viva notes</title>
+<style>
+@page { size: A4; margin: 15mm 14mm 17mm 14mm; @bottom-center { content: "FrontRow viva notes  ·  page " counter(page); font: 8pt Helvetica, Arial, sans-serif; color: #666; } }
+* { box-sizing: border-box; }
+body { font: 9.6pt/1.42 Helvetica, Arial, sans-serif; color: #15192b; margin: 0; }
+h1 { font-size: 21pt; margin: 0 0 3mm; color: #16264A; }
+h2 { font-size: 13.5pt; margin: 0 0 2mm; color: #fff; background: #16264A; padding: 2.2mm 3mm; border-radius: 2mm; break-after: avoid; }
+h3 { font-size: 10.5pt; margin: 4mm 0 1.5mm; color: #16264A; break-after: avoid; }
+p { margin: 0 0 2mm; } ul { margin: 0 0 2mm; padding-left: 5mm; } li { margin: 0 0 1mm; }
+.short { background: #EAF1FF; border-left: 3px solid #2F5FD0; padding: 1.6mm 2.6mm; margin: 0 0 2.5mm; font-weight: 700; break-inside: avoid; }
+table { width: 100%; border-collapse: collapse; margin: 0 0 3mm; font-size: 8.4pt; }
+th { background: #16264A; color: #fff; text-align: left; padding: 1.4mm 1.8mm; }
+td { border: 1px solid #C9D0E0; padding: 1.3mm 1.8mm; vertical-align: top; }
+tr { break-inside: avoid; }
+tr:nth-child(even) td { background: #F6F8FC; }
+.tag { font-size: 7.4pt; font-weight: 700; padding: 0.3mm 1.4mm; border-radius: 1mm; white-space: nowrap; }
+.src { background: #DDF3E6; color: #0E6B3A; } .conf { background: #FFE9C7; color: #8A5200; }
+.met { color: #0E6B3A; font-weight: 700; } .part { color: #A15C00; font-weight: 700; } .chg { color: #2F4FB3; font-weight: 700; } .no { color: #B3261E; font-weight: 700; }
+.page { break-before: page; }
+.map { border: 1px solid #C9D0E0; border-radius: 2mm; padding: 1mm; margin: 0 0 3mm; } .map svg { width: 100%; height: auto; display: block; }
+.small { font-size: 8pt; color: #4a5370; } .note { background: #FFF4DD; border: 1px solid #F0C56A; padding: 1.6mm 2.6mm; border-radius: 1.5mm; margin: 0 0 3mm; font-size: 8.6pt; }
+.cover { padding-top: 6mm; } .cover .date { color: #4a5370; margin-bottom: 4mm; }
+.box { border: 1px solid #C9D0E0; border-radius: 2mm; padding: 2mm 3mm; margin: 0 0 3mm; }
+.check li { list-style: none; margin-bottom: 1.6mm; } .check { padding-left: 0; }
+</style></head><body>
+
+<!-- ===================== 1. COVER ===================== -->
+<div class="cover">
+<h1>FrontRow: viva notes</h1>
+<div class="date">End-term build · generated 15 October 2026 · live app: https://frontrow-pi-three.vercel.app · repo: https://github.com/ArchPoseidon/FrontRow</div>
+<div class="short">In short: FrontRow tells a fan the moment an artist they follow announces a show in India, with a ticket link that opens the exact page. It does this with free services, and it shows its own failures instead of hiding them.</div>
+
+<h3>The app in 5 lines</h3>
+<ol>
+<li><b>What it is.</b> A show-alert agent. The brief called it ShowRadar; the product is named FrontRow.</li>
+<li><b>Start.</b> You sign in with Google and add artists by Spotify, search or pasting names. The app matches each name to one confirmed artist, with a photo.</li>
+<li><b>Middle.</b> Background jobs read news, ticketing listings and web search. Gemini (the AI) turns messy text into structured shows. Plain code then matches shows to your artists, removes duplicates and checks the ticket link is the exact page.</li>
+<li><b>End.</b> You get a Telegram alert (poster, date, venue, ticket tiers, link) and a dashboard: On sale now, Going, Saved, Calendar. In chat, /new and /tickets answer follow-up questions.</li>
+<li><b>Safety.</b> The app never buys tickets, never invents events, and sends the owner a daily health message.</li>
+</ol>
+
+<h3>How to read these notes</h3>
+<p><span class="tag src">From code/brief</span> means there is evidence in the code, the brief or our build log. <span class="tag conf">Confirm yourself</span> means it is my guess: say it only if it is true for you.</p>
+<div class="note"><b>Two assumptions I made (you did not send separate files).</b> (1) The problem statement is the build brief at <i>~/Desktop/Claude.md</i>. <span class="tag conf">Confirm yourself</span> that it matches the mentors' sheet. (2) The submitted Components Map is the swimlane map drawn in our chat (the high-contrast version), redrawn here from that drawing. <span class="tag conf">Confirm yourself</span> that it is the exact one you handed in; the examiners hold that version.</div>
+
+<h3>What is in here</h3>
+<table><tr><th>Section</th><th>Page</th><th>Use it for</th></tr>
+<tr><td>2. Brief vs build</td><td>2</td><td>"Did you meet the brief?"</td></tr>
+<tr><td>3. Components Map</td><td>4</td><td>Your walkthrough, and where the map and the build differ</td></tr>
+<tr><td>4. Why I built it this way, and the Nine Checks</td><td>7</td><td>Decisions, Gemini, "does it deserve to be built?"</td></tr>
+<tr><td>5. Something broke</td><td>9</td><td>Symptom questions</td></tr>
+<tr><td>6. Hardest questions</td><td>9</td><td>Honest short answers</td></tr>
+<tr><td>7. Demo route and 8. Pre-viva check</td><td>10</td><td>The live app on the day</td></tr></table>
+</div>
+
+<!-- ===================== 2. BRIEF VS BUILD ===================== -->
+<div class="page"><h2>2. Brief vs build</h2>
+<div class="short">In short: the core mission is met. Email is built but switched off, a few things changed with your approval, and the last two build phases (three-account test, demo recording) are not done.</div>
+<table><tr><th style="width:27%">Requirement (from the brief)</th><th style="width:11%">Status</th><th style="width:26%">Show it in the app</th><th>What I say if asked</th></tr>
+<tr><td>Alert on Telegram and email when a followed artist announces an India show</td><td class="part">Partly</td><td>Link Telegram; send /new</td><td>Telegram is live. Email is built (Brevo) but switched off: no domain, and Gmail app passwords were not available.</td></tr>
+<tr><td>Works for any user and any artist (nothing hard-coded to the owner)</td><td class="met">Met</td><td>Sign in with a second account</td><td>The owner is only the demo user. Artists come from each user's own list.</td></tr>
+<tr><td>Free tiers only</td><td class="chg">Changed (approved)</td><td>Health page shows credits</td><td>Added Scrape.do as a backup crawler (you gave the key) and free-licence photos. Brevo is chosen but not enabled.</td></tr>
+<tr><td>Never invent events; every event has a real source; demo data labelled Sample</td><td class="met">Met</td><td>Any event page, Sources list</td><td>A show with no source link is dropped. Sample cards carry a Sample label.</td></tr>
+<tr><td>Never automate ticket purchases</td><td class="met">Met</td><td>Get tickets opens another site</td><td>The app alerts, people buy.</td></tr>
+<tr><td>Scrape politely: low frequency, respect robots.txt</td><td class="part">Partly</td><td>System pulse, job times</td><td>Low frequency and daily credit caps. I did not build a robots.txt check: say so plainly.</td></tr>
+<tr><td>Spotify: import, search, paste, links, MusicBrainz fallback, confirm tray</td><td class="met">Met, with a limit</td><td>Onboarding step 1</td><td>Import only works for Spotify accounts on the app's user list (development-mode limit). Search uses the app's own token, which the brief did not specify.</td></tr>
+<tr><td>Google sign-in with the consent screen published</td><td class="chg">Changed</td><td>Landing page sign-in</td><td>Kept in Testing mode by your choice; judges are listed test users. Calendar permission added at sign-up (beyond the brief).</td></tr>
+<tr><td>First results within about 60 seconds of finishing onboarding</td><td class="met">Met</td><td>Last onboarding screen</td><td>About 45 s, with a time budget so it never passes 60 s. The scan also starts as soon as artists are imported.</td></tr>
+<tr><td>"Touring India now" and a seeded demo radar</td><td class="met">Met</td><td>Onboarding row; /demo</td><td>/demo shows 101 real, sourced shows (checked today).</td></tr>
+<tr><td>Collectors: news, ticketing listings, event pages, grounded web search</td><td class="met">Met (3 of 5 sites)</td><td>System pulse dots</td><td>District, BookMyShow, AllEvents. SkillBox came back almost empty; SortMyScene had no event list, so it was removed.</td></tr>
+<tr><td>Brain: extract, match, dedupe, decide urgency</td><td class="met">Met</td><td>Event page; alert colour</td><td>AI reads. Code matches, dedupes and decides.</td></tr>
+<tr><td>Telegram alert: poster, buttons, commands</td><td class="met">Met (+ extras)</td><td>An alert in Telegram</td><td>Also /new, /tickets and a Ticket info button, added at your request.</td></tr>
+<tr><td>Daily 8:30 heartbeat to the owner</td><td class="met">Met</td><td>The Telegram message</td><td>It failed on 13 and 14 Oct because the owner chat link moved to another account. Fixed by pinning the owner's chat.</td></tr>
+<tr><td>Scheduling by cron-job.org; jobs under 60 s and safe to repeat</td><td class="met">Met</td><td>cron-job.org job list</td><td>7 jobs plus Vercel's daily heartbeat. Repeat runs do nothing new.</td></tr>
+<tr><td>Screens: landing, demo, onboarding, radar, event, settings; all card states</td><td class="met">Met (restyled)</td><td>Walk the screens</td><td>Restyled twice at your direction. shadcn/ui and React Email were not used.</td></tr>
+<tr><td>Failures visible; fallbacks</td><td class="met">Mostly met</td><td>System pulse; /api/health</td><td>Crawler chain Firecrawl, Scrape.do, Jina; daily caps; link statuses.</td></tr>
+<tr><td>Phase gates</td><td class="part">Partly</td><td>n/a</td><td>Phases 0 to 4 passed. Phase 5's "listing change gives a tiered alert with no manual step" was not seen end to end. Phase 6 not done.</td></tr>
+<tr><td>Stretch: tier watcher, re-ping, day-of reminders, map view</td><td class="no">Not built</td><td>n/a</td><td>Stretch was only for after Phase 6 passed.</td></tr>
+<tr><td>Scope lock: build only what the brief lists</td><td class="chg">Changed (asked for)</td><td>Going, Saved, Calendar, Connections</td><td>Extras were your requests; each is logged in the decisions file.</td></tr>
+</table>
+</div>
+
+<!-- ===================== 3. COMPONENTS MAP ===================== -->
+<div class="page"><h2>3. Components Map</h2>
+<div class="short">In short: the map shows who does what. Rows are actors, columns are stages. Read left to right, top to bottom, and follow the dashed arrows.</div>
+<h3>3a. The submitted map (as drawn in our chat)</h3>
+<div class="map">
+<svg viewBox="0 0 680 510" xmlns="http://www.w3.org/2000/svg" role="img" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M1.5 1.2L8.5 5L1.5 8.8z" fill="#16264A"/></marker></defs>
+<rect x="0" y="0" width="680" height="510" rx="10" fill="#FFFFFF"/>
+<rect x="2" y="2" width="676" height="34" rx="6" fill="#16264A"/>
+<g fill="#FFFFFF" font-size="14" font-weight="700" text-anchor="middle"><text x="43" y="25">Actor</text><text x="147" y="25">Trigger</text><text x="265" y="25">Input</text><text x="383" y="25">Processing</text><text x="501" y="25">AI</text><text x="619" y="25">Output</text></g>
+<rect x="2" y="40" width="676" height="86" rx="6" fill="#EEEDFC"/><rect x="2" y="132" width="676" height="86" rx="6" fill="#EEF0F3"/><rect x="2" y="224" width="676" height="86" rx="6" fill="#E6F7EE"/><rect x="2" y="316" width="676" height="86" rx="6" fill="#FFF3D9"/><rect x="2" y="408" width="676" height="86" rx="6" fill="#FFECEF"/>
+<g fill="#16264A"><rect x="2" y="40" width="82" height="86" rx="6"/><rect x="2" y="132" width="82" height="86" rx="6"/><rect x="2" y="224" width="82" height="86" rx="6"/><rect x="2" y="316" width="82" height="86" rx="6"/><rect x="2" y="408" width="82" height="86" rx="6"/></g>
+<g fill="#FFFFFF" font-size="13.5" font-weight="700" text-anchor="middle"><text x="43" y="80">Fan or</text><text x="43" y="96">judge</text><text x="43" y="172">Scheduler</text><text x="43" y="264">System</text><text x="43" y="356">AI model</text><text x="43" y="448">Services</text></g>
+<g fill="#B9C6E6" font-size="11.5" text-anchor="middle"><text x="43" y="112">(user)</text><text x="43" y="188">(cron)</text><text x="43" y="280">(app + data)</text><text x="43" y="372">(Gemini)</text><text x="43" y="464">(outside)</text></g>
+<g stroke-width="2.2" font-size="12.5" text-anchor="middle" fill="#0B1530">
+<rect x="96" y="51" width="102" height="64" rx="8" fill="#D9D5FA" stroke="#4F43D6"/><text x="147" y="80" font-weight="700">Signs in</text><text x="147" y="96">with Google</text>
+<rect x="214" y="51" width="102" height="64" rx="8" fill="#D9D5FA" stroke="#4F43D6"/><text x="265" y="73" font-weight="700">Adds artists:</text><text x="265" y="88">Spotify, search,</text><text x="265" y="102">or paste</text>
+<rect x="568" y="51" width="102" height="64" rx="8" fill="#FFD3CB" stroke="#D13A22"/><text x="619" y="73" font-weight="700">Dashboard,</text><text x="619" y="88">Going, Saved,</text><text x="619" y="102">Calendar</text>
+<rect x="96" y="143" width="102" height="64" rx="8" fill="#D8DCE3" stroke="#4A5463"/><text x="147" y="165" font-weight="700">cron-job.org</text><text x="147" y="180">runs jobs every</text><text x="147" y="194">5 to 30 min</text>
+<rect x="214" y="235" width="102" height="64" rx="8" fill="#BDEBD3" stroke="#17884F"/><text x="265" y="257" font-weight="700">Matches each</text><text x="265" y="272">artist: Spotify</text><text x="265" y="286">+ MusicBrainz</text>
+<rect x="332" y="235" width="102" height="64" rx="8" fill="#BDEBD3" stroke="#17884F"/><text x="383" y="257" font-weight="700">Match, dedupe,</text><text x="383" y="272">verify links,</text><text x="383" y="286">set stage colour</text>
+<rect x="568" y="235" width="102" height="64" rx="8" fill="#BDEBD3" stroke="#17884F"/><text x="619" y="257" font-weight="700">Shows and</text><text x="619" y="272">alerts saved</text><text x="619" y="286">(Neon database)</text>
+<rect x="450" y="327" width="102" height="64" rx="8" fill="#FFE0A3" stroke="#C47F00"/><text x="501" y="349" font-weight="700">Web search,</text><text x="501" y="364">extracts events</text><text x="501" y="378">and tiers</text>
+<rect x="332" y="419" width="102" height="64" rx="8" fill="#D8DCE3" stroke="#4A5463"/><text x="383" y="441" font-weight="700">Crawlers:</text><text x="383" y="456">Firecrawl, then</text><text x="383" y="470">Scrape.do, Jina</text>
+<rect x="568" y="419" width="102" height="64" rx="8" fill="#FFC7D2" stroke="#C72E55"/><text x="619" y="441" font-weight="700">Telegram alert</text><text x="619" y="456">+ Google</text><text x="619" y="470">Calendar event</text>
+</g>
+<g fill="none" stroke="#16264A" stroke-width="1.9" stroke-dasharray="5 4" marker-end="url(#ar)"><path d="M198 83 H212"/><path d="M265 115 V233"/><path d="M316 267 H330"/><path d="M198 175 H383 V233"/><path d="M383 417 V301"/><path d="M434 267 H501 V325"/><path d="M552 359 H560 V267 H566"/><path d="M619 235 V117"/><path d="M619 299 V417"/></g>
+</svg></div>
+<p class="small">The examiners hold the version you handed in. If it differs from this drawing, trust yours and use section 3c to spot the gaps.</p>
+
+<h3>3b. The map as it should read today (same rows and boxes)</h3>
+<table><tr><th style="width:15%">Row</th><th style="width:21%">Box on the map</th><th>What it should say today</th></tr>
+<tr><td>Fan</td><td>Signs in with Google</td><td>Sign in with Google. Google also asks, optionally, to let the app add shows to your calendar.</td></tr>
+<tr><td>Fan</td><td>Adds artists</td><td>Spotify import (only accounts on the Spotify app's list), search, paste a list or links, or add from "Touring India now".</td></tr>
+<tr><td>Fan</td><td>Dashboard, Going, Saved, Calendar</td><td>On sale now, the board of shows, flip cards, Going and Saved, Calendar with four views, Profile and Connections.</td></tr>
+<tr><td>Scheduler</td><td>cron-job.org runs jobs every 5 to 30 min</td><td>7 jobs: news 15 min, process 5, dispatch 5, links 10, listings 30 (each page every 6 h), web-search sweep every 30 min 6 to 10 IST, digest 9 IST. Plus Vercel's own daily heartbeat.</td></tr>
+<tr><td>System</td><td>Matches each artist</td><td>Finds the Spotify artist (photo, genres), checks MusicBrainz for aliases, and asks the user to confirm any "Which one?".</td></tr>
+<tr><td>System</td><td>Match, dedupe, verify links, set stage colour</td><td>Name-similarity matching in code; same artist, city and date become one show; each link checked as the exact page; stage colour (red live, purple go-live date, orange announced).</td></tr>
+<tr><td>System</td><td>Shows and alerts saved (Neon)</td><td>Shows, tiers, sources and alerts saved in Neon; one alert per user, show and channel.</td></tr>
+<tr><td>AI</td><td>Web search, extracts events and tiers</td><td>Gemini searches the web, reads page text into shows, reads ticket pages into tiers, and answers a yes/no on near-matches.</td></tr>
+<tr><td>Services</td><td>Crawlers</td><td>Plain fetch first, then Firecrawl, Scrape.do, Jina, with daily budgets.</td></tr>
+<tr><td>Services</td><td>Telegram alert + Google Calendar event</td><td>Telegram sends alerts and receives taps and commands. Google Calendar gets an event only if the user granted permission.</td></tr></table>
+</div>
+
+<div class="page"><h3 style="margin-top:0">3c. Discrepancies: submitted map vs build</h3>
+<div class="short">In short: the map is accurate on the main flow. It simplifies the AI step, leaves out the Telegram return path and the owner report, and overstates Google Calendar until the console is set up.</div>
+<table><tr><th style="width:15%">Box</th><th style="width:25%">Submitted map says</th><th style="width:32%">The build actually does</th><th>What I say if asked</th></tr>
+<tr><td>AI model position</td><td>Arrows run Match, then AI, then saved.</td><td>Gemini reads raw text into shows <b>before</b> matching. Code matches. Gemini is only called again for a yes/no on near-matches.</td><td>"The AI reads, the code decides. The map shows the AI as one lane."</td></tr>
+<tr><td>Match, dedupe, verify links, set stage colour</td><td>One box.</td><td>Three code steps at different times: matching and dedupe in the process job; link checks in their own job and again before an alert is sent; stage colour worked out when a card is shown.</td><td>"I grouped them for readability."</td></tr>
+<tr><td>Telegram</td><td>Output only.</td><td>Also an input: taps (Going, Not for me, Ticket info) and commands (/new, /tickets, /upcoming, /artists, /mute).</td><td>"Telegram is two-way; the arrow back is missing."</td></tr>
+<tr><td>Scheduler</td><td>cron-job.org only.</td><td>Also Vercel's daily cron for the owner heartbeat. Scans also start from user actions (import, Scan now), not only the clock.</td><td>"Free Vercel only allows daily jobs, so cron-job.org does the rest."</td></tr>
+<tr><td>First scan</td><td>Not shown.</td><td>Starts at once when artists are imported, and when Telegram is linked it queues the first alerts.</td><td>"So a new user sees it working in under a minute."</td></tr>
+<tr><td>Google Calendar event</td><td>Listed as an output.</td><td>Only after the user grants permission. The Google Cloud console steps are not done yet, so this path is untested. The in-app calendar always works.</td><td>"Built and ready; needs the console switched on."</td></tr>
+<tr><td>Spotify, MusicBrainz</td><td>Inside the System box.</td><td>They are outside services. Spotify import works only for listed accounts.</td><td>"Same idea, drawn inside for space."</td></tr>
+<tr><td>Owner heartbeat, email</td><td>Absent.</td><td>Heartbeat to the owner's Telegram daily. Email is built but switched off.</td><td>"Off by choice for now."</td></tr></table>
+<p class="small">The app itself has no components-map page, so there is no third version to compare.</p>
+
+<h3>3d. A 60-second walkthrough to rehearse</h3>
+<div class="box">"Read it left to right. At the top, the fan signs in with Google and adds artists from Spotify, search or a pasted list. Below, the scheduler wakes the system every few minutes. The system first matches each name to one real artist, and asks the user when two artists share a name. Crawlers fetch news and ticketing pages, even ones that block ordinary requests. Gemini, the AI, reads that messy text and returns structured shows with prices. Then plain code takes over: it matches shows to artists, merges duplicates, checks each ticket link opens the exact page for that show, and sets the colour: red tickets live, purple go-live date, orange announced. Shows and alerts are saved in the Neon database. The output is the dashboard with Going, Saved and Calendar, and a Telegram alert, with an optional Google Calendar event. Failures show on the system panel and in a daily message to me."</div>
+</div>
+
+<!-- ===================== 4. WHY + NINE CHECKS ===================== -->
+<div class="page"><h2>4. Why I built it this way</h2>
+<div class="short">In short: free services only, AI only where text is messy, code wherever the answer must be exact, and every failure made visible.</div>
+<table><tr><th style="width:4%">#</th><th style="width:30%">Decision</th><th>Why</th><th style="width:13%">Tag</th></tr>
+<tr><td>1</td><td>Telegram first, email later</td><td>The brief names Telegram as primary: free, instant, no domain. Email needs a sender; Resend only sends to its own owner without a domain, Gmail app passwords were unavailable, so Brevo was chosen and left off.</td><td><span class="tag src">From code/brief</span></td></tr>
+<tr><td>2</td><td>Gemini for the AI parts</td><td>The brief lists Gemini as the allowed free model. The code also uses Gemini's built-in Google Search, so one service does the web search and the structured output. Why not Anthropic or OpenAI: they are not on the brief's allowed list, so using them would break "free tiers only".</td><td><span class="tag src">From code/brief</span> <span class="tag conf">Confirm: Mesa provides it</span></td></tr>
+<tr><td>3</td><td>Code, not AI, makes exact decisions</td><td>Matching thresholds (0.85, or 0.92 for name-only artists), duplicate merging, urgency rules, and link checks are plain code. The AI only breaks ties in the 0.7 to 0.85 band. Aliases come from MusicBrainz, never from the AI.</td><td><span class="tag src">From code/brief</span></td></tr>
+<tr><td>4</td><td>Every ticket link must be the exact page</td><td>A homepage or another city's page would send a fan to the wrong place. Links are checked for: loads, a specific page, names the artist, matches this city or date. Otherwise the card says "not confirmed yet".</td><td><span class="tag src">From code/brief</span></td></tr>
+<tr><td>5</td><td>A chain of crawlers with daily caps</td><td>BookMyShow blocks plain requests. Firecrawl first, then Scrape.do, then Jina, so one failure never stops the pipeline. Caps protect the free credits.</td><td><span class="tag src">From code/brief</span></td></tr>
+<tr><td>6</td><td>cron-job.org, and a scan on import</td><td>Vercel's free plan runs jobs once a day. A new user must not wait for a timer, so the first scan starts when artists arrive.</td><td><span class="tag src">From code/brief</span></td></tr>
+<tr><td>7</td><td>The Stub look, with dulled purple concert photos</td><td>You chose Stub from three options and asked for the plush, dark, photo-backed feel.</td><td><span class="tag conf">Confirm yourself</span></td></tr>
+<tr><td>8</td><td>Google kept in Testing mode</td><td>You chose it. The calendar permission is "sensitive", so a public launch needs Google's review.</td><td><span class="tag src">From code/brief</span></td></tr></table>
+
+<h3>When the AI call fails</h3>
+<div class="box">The code retries at 1, 4 and 16 seconds on rate limits or outages. If it still fails, the item stays queued and the next 5-minute run tries again. If the AI returns broken output, it is asked once more, then the item is marked as an error. A failed AI step never creates a show: no source means no event. First-run scans carry on with the other sources and show partial results. <span class="tag src">From code/brief</span></div>
+
+<h3>The Nine Checks: does FrontRow deserve to be built?</h3>
+<table><tr><th style="width:20%">Check</th><th style="width:8%">Answer</th><th>Evidence in this build</th></tr>
+<tr><td><b>Kill switches</b> (any No: don't build)</td><td></td><td></td></tr>
+<tr><td>01 Problem real?</td><td class="met">Yes</td><td>Fans miss announcements, and early-bird tiers sell out first. The alert arrives with venue, date, tiers and link. <span class="tag conf">Add your own story</span></td></tr>
+<tr><td>02 Workflow repeated?</td><td class="met">Yes</td><td>Every new tour or sale phase repeats it; the jobs run all day.</td></tr>
+<tr><td>03 Input available?</td><td class="met">Yes, with limits</td><td>News, ticketing pages and web search are reachable. Spotify import only works for listed accounts, so search and paste cover everyone.</td></tr>
+<tr><td><b>Sizing</b> (any No: build smaller)</td><td></td><td></td></tr>
+<tr><td>04 Output valuable?</td><td class="met">Yes</td><td>A specific show on Telegram within minutes; 84 of 118 shows had a verified ticket page when I checked today.</td></tr>
+<tr><td>05 Impact measurable?</td><td class="part">Partly</td><td>The daily message counts new shows, alerts sent and verified links; "Bought it" taps record intent. There is no user study.</td></tr>
+<tr><td>08 ROI worth it?</td><td class="met">Yes</td><td>Free tiers, built in days. Limit: free crawler credits.</td></tr>
+<tr><td><b>Boundary</b> (any No: put a human exactly here)</td><td></td><td></td></tr>
+<tr><td>06 Failure risk OK?</td><td class="met">Yes</td><td>Worst case is a missed or wrong alert; no money moves. Unverified links are never shown.</td></tr>
+<tr><td>07 Judgment protected?</td><td class="met">Yes</td><td>The human confirms the artist, decides to buy, and can mute or dismiss any show.</td></tr>
+<tr><td>09 Owner clear?</td><td class="met">Yes</td><td>Each user owns their list and alerts; the owner alone gets the system report.</td></tr></table>
+<p><b>Ideas the checks killed in this build.</b> "Auto-buy tickets": killed by 07 (also a brief non-goal). "Let the AI invent artist aliases": killed by 06 (wrong alerts); aliases come from MusicBrainz. "Show a link even if unchecked": killed by 04 and 06. "Send the system report to every user": killed by 09. <span class="tag src">From code/brief</span></p>
+</div>
+
+<!-- ===================== 5. DRILLS ===================== -->
+<div class="page"><h2>5. "Something broke" drills</h2>
+<div class="short">In short: first open /api/health. It shows the database, the sources, the job times and the credits in one screen.</div>
+<table><tr><th style="width:23%">Symptom</th><th style="width:42%">Most likely cause</th><th>How I'd check</th></tr>
+<tr><td>1. A button does nothing</td><td>Not signed in (the session ended); Spotify refused an account not on its list; Google Calendar not connected (a "connect" prompt appears instead); no Get tickets button because the link is not verified, which is by design.</td><td>Sign in again; read the message shown; open the Connections tab; open the event's Sources.</td></tr>
+<tr><td>2. A form saves but nothing shows</td><td>The radar hides shows you dismissed, shows in cities you do not watch, and muted artists. A filter chip may be hiding it.</td><td>Check the city and the filter chip (All India), and Profile > Cities.</td></tr>
+<tr><td>3. Old data</td><td>Scheduled jobs stopped (cron-job.org paused), or the free crawler budget ran out for the day.</td><td>/api/health shows the last time each job ran; the System pulse shows dots per source.</td></tr>
+<tr><td>4. AI text is missing</td><td>The Gemini key expired or the free quota ran out; items stay queued and no new shows appear.</td><td>/api/health job errors; run history shows errors.</td></tr>
+<tr><td>5. A scheduled job did not run</td><td>The cron-job.org job is disabled, the secret is wrong (the job returns 401), or Vercel's free cron ran later in its hour.</td><td>cron-job.org job list and last status; the daily message arrives about 8:30 to 9:00 IST.</td></tr>
+<tr><td>6. A blank page</td><td>The database woke slowly (a few seconds) or the deployment is broken. A skeleton shows while it loads.</td><td>Wait ten seconds, reload; open /api/health.</td></tr>
+<tr><td>7. An expired key or token</td><td>Gemini, Firecrawl, Scrape.do, Telegram, Spotify or Google. Google tokens expire after 7 days in Testing mode.</td><td>Health shows failing sources; Connections shows Spotify or Calendar as not connected.</td></tr>
+<tr><td>8. The database is paused</td><td>The free Neon plan suspends after idle time; pages error or the first request is slow.</td><td>/api/health returns an error (503) or a slow reply. Tell the mentor and open any page to wake it.</td></tr></table>
+<p class="small">Today's check: the database answered in about 1.6 seconds, so it was awake.</p>
+
+<!-- ===================== 6. HARD QUESTIONS ===================== -->
+<h2 style="margin-top:5mm">6. The 8 hardest questions</h2>
+<div class="short">In short: be honest about limits. Each answer below is short and true to the build.</div>
+<table><tr><th style="width:30%">Question</th><th>Short honest answer</th></tr>
+<tr><td>1. Which parts did the AI write, and do you understand them?</td><td>The code was written with an AI coding assistant at my direction. <span class="tag conf">Confirm yourself</span> I can explain each box: what comes in, what the decision rule is, and what happens when it fails. Use sections 3 and 4.</td></tr>
+<tr><td>2. Why not let the AI do the matching?</td><td>Because a wrong match means a wrong alert. Code with fixed thresholds is predictable. The AI only breaks ties.</td></tr>
+<tr><td>3. How do you stop a wrong ticket link?</td><td>Every link is loaded and checked for a specific page, the artist's name, and this show's city or date. If nothing passes, the card says "not confirmed yet". Our own testing caught a Linktree page marked as tickets, and it was fixed.</td></tr>
+<tr><td>4. Is scraping BookMyShow allowed?</td><td>I used crawling services at low frequency for personal, non-commercial use, never bought tickets, and only link out. I did not build a robots.txt check, and I have not read BookMyShow's terms. <span class="tag conf">Confirm yourself</span></td></tr>
+<tr><td>5. What if Gemini invents a show?</td><td>A show needs a real source link, an India location and a future date. Two sources, or a ticket link, are needed before a red alert. A tribute flag drops cover nights.</td></tr>
+<tr><td>6. What breaks with 1,000 users?</td><td>Spotify import (limited user list), free crawler credits, and Gemini's free quota. Telegram and the database cope better. The fix is paid tiers and Spotify's extended access.</td></tr>
+<tr><td>7. What about privacy and security?</td><td>Spotify access is read-only; tokens stay on the server; sign-in asks identity plus optional calendar events; a user can delete their account; the system report goes only to the owner.</td></tr>
+<tr><td>8. What is unfinished?</td><td>Email is off, Google's console steps and Phase 6 (three-account test, demo recording) are pending, and the stretch features are not built.</td></tr></table>
+</div>
+
+<!-- ===================== 7. DEMO + 8. PRE-VIVA ===================== -->
+<div><h2 style="margin-top:5mm">7. Two-minute demo route (no data changed)</h2>
+<div class="short">In short: show the public pages, one event's sources, and one real Telegram alert. Do not press Scan now, Going, Save or Add to calendar.</div>
+<ol>
+<li><b>Landing page</b> (the live URL): point at the live counters and the flipping example card.</li>
+<li><b>See a live demo:</b> scroll to On sale now, watch a card flip through show, artist photo, concert photo and tiers.</li>
+<li><b>Open Details on one show:</b> show the Sources list and the ticket tiers.</li>
+<li><b>System pulse</b> at the bottom of /demo: one dot per source, with the last scan time. Look only; do not press Scan now.</li>
+<li><b>Telegram:</b> show an alert already in the chat, with its poster and buttons.</li>
+<li><b>Components Map:</b> give the 60-second walkthrough from section 3d.</li>
+</ol>
+
+<h2 style="margin-top:5mm">8. Pre-viva check</h2>
+<div class="note"><b>These results are from the date above. They do not prove the app works on viva day.</b></div>
+<h3>Part A: checked today by Claude, 15 Oct 2026, 13:11 IST (07:41 UTC), read-only</h3>
+<table><tr><th style="width:36%">Check</th><th style="width:14%">Result</th><th>What was seen</th></tr>
+<tr><td>Landing page opens</td><td class="met">200 OK</td><td>Loaded in about 3 s.</td></tr>
+<tr><td>/demo opens</td><td class="met">200 OK</td><td>101 real shows listed; 85 with a verified ticket button.</td></tr>
+<tr><td>An event page and its poster image</td><td class="met">200 OK</td><td>Both loaded.</td></tr>
+<tr><td>Health report (/api/health)</td><td class="met">OK</td><td>Database replied in 1.6 s (awake). 10 sources, none failing. 153 artists; 4 shows added in 24 h.</td></tr>
+<tr><td>Scheduled jobs are running</td><td class="met">Yes</td><td>process, links and dispatch last ran at 07:40 UTC; news and listings at 07:30 UTC.</td></tr>
+<tr><td>Ticket links</td><td class="met">84 verified</td><td>Out of 118 shows: 3 ok, 7 homepage-only, 24 no direct page found.</td></tr>
+<tr><td>Crawler credits</td><td class="met">Fine</td><td>Firecrawl 11 of 60 today; Scrape.do 96 of 900 this month.</td></tr>
+<tr><td>Spotify connection (owner)</td><td class="met">Connected</td><td>Not broken.</td></tr>
+<tr><td>GitHub repo opens without login</td><td class="met">200 OK</td><td>Public.</td></tr>
+<tr><td>Signed-in pages, Telegram delivery, Gemini key, email</td><td class="no">Not checked</td><td>Not checked by Claude, check yourself.</td></tr></table>
+
+<h3>Part B: your checklist, 1 hour before the viva</h3>
+<ul class="check">
+<li>☐ The live URL opens on my laptop and phone. If not: tell the mentor the site is down and walk through the Components Map instead.</li>
+<li>☐ The database is awake. Open /api/health: it should say ok. If slow or failing: tell the mentor the free database was asleep, and wait.</li>
+<li>☐ The main pages show current data. Check the newest date on /demo. If old: say the schedules may be paused and show the job list.</li>
+<li>☐ AI-written content is present: shows have dates, venues and tiers. If not: tell the mentor the AI step may be out of quota, and explain the retry behaviour.</li>
+<li>☐ The demo route (section 7) works end to end. If a step fails: skip it and keep going.</li>
+<li>☐ The GitHub repo link opens.</li>
+</ul>
+<p class="small">If the app fails during the viva, explain from the Components Map and these notes. Do not change keys, settings or code before or during the viva.</p>
+</div>
+</body></html>

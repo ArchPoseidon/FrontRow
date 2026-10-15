@@ -26,7 +26,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return j as T;
 }
 
-export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, manage }: { initialStep: number; spotifyFlag?: string; spotifyCounts?: { followed: number; top: number }; manage?: boolean }) {
+export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, spotifyAs, spotifyShared, manage }: { initialStep: number; spotifyFlag?: string; spotifyCounts?: { followed: number; top: number }; spotifyAs?: string; spotifyShared?: boolean; manage?: boolean }) {
   // Right after Spotify sends the user back with imported artists, play the importing animation for a beat.
   const [importing, setImporting] = useState(spotifyFlag === "imported");
   useEffect(() => {
@@ -49,7 +49,9 @@ export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, manage }:
       const parts = [`${followed} followed`, `${top} top`].join(" and ");
       return top === 0 && followed === 0
         ? { tone: "info", text: "Spotify connected, but it returned no followed or top artists yet. New accounts have little listening history. Search or paste a few artists to get started." }
-        : { tone: top === 0 ? "info" : "ok", text: `Imported ${parts} artists from Spotify.${top === 0 ? " Spotify returned no top artists yet (they build up with listening history)." : ""}` };
+        : spotifyShared
+          ? { tone: "info", text: `Imported ${parts} artists from the Spotify account${spotifyAs ? ` "${spotifyAs}"` : ""}. That Spotify account is also linked to another FrontRow account. If it isn't yours, tap "Use a different Spotify account" below and pick yours on Spotify's screen.` }
+          : { tone: top === 0 ? "info" : "ok", text: `Imported ${parts} artists from Spotify${spotifyAs ? ` account "${spotifyAs}"` : ""}.${top === 0 ? " Spotify returned no top artists yet (they build up with listening history)." : ""}` };
     }
     return SPOTIFY_NOTICES[spotifyFlag] ?? null;
   });
@@ -60,7 +62,7 @@ export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, manage }:
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [resolving, setResolving] = useState(false);
-  const [spotify, setSpotify] = useState<{ connected: boolean; broken: boolean } | null>(null);
+  const [spotify, setSpotify] = useState<{ connected: boolean; broken: boolean; name?: string | null } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -268,11 +270,22 @@ export function ArtistsStep({ initialStep, spotifyFlag, spotifyCounts, manage }:
             {spotify?.connected && !spotify.broken ? (
               <div className="flex items-center justify-between gap-3 rounded-card border border-emerald-500/60 bg-surface px-4 py-3">
                 <span className="font-medium">
-                  <span aria-hidden>✓ </span>Spotify connected
+                  <span aria-hidden>✓ </span>Spotify connected{spotify.name ? ` as ${spotify.name}` : ""}
                 </span>
-                <button onClick={resync} disabled={syncing} className="text-sm text-muted underline underline-offset-2 hover:text-foreground disabled:opacity-50">
-                  {syncing ? "Importing…" : "Re-import my artists"}
-                </button>
+                <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <button onClick={resync} disabled={syncing} className="text-sm text-muted underline underline-offset-2 hover:text-foreground disabled:opacity-50">
+                    {syncing ? "Importing…" : "Re-import my artists"}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await fetch("/api/spotify/disconnect", { method: "POST" }).catch(() => {});
+                      window.location.href = "/api/spotify/login";
+                    }}
+                    className="text-sm text-muted underline underline-offset-2 hover:text-foreground"
+                  >
+                    Use a different Spotify account
+                  </button>
+                </span>
               </div>
             ) : (
               <ConnectSpotifyButton className="flex items-center justify-center gap-3 rounded-card bg-[#1DB954] px-4 py-3.5 font-bold text-black transition hover:brightness-110">

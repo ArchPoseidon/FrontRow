@@ -112,6 +112,10 @@ export function authorizeUrl(state: string): string {
     scope: SPOTIFY_SCOPES,
     redirect_uri: process.env.SPOTIFY_REDIRECT_URI!,
     state,
+    // Always show Spotify's own screen (with its "Not you?" link) instead of silently re-using whichever Spotify
+    // account is already logged in on this browser. Without it, a second person on the same browser gets the first
+    // person's artists.
+    show_dialog: "true",
   });
   return `${ACCOUNTS}/authorize?${p}`;
 }
@@ -133,8 +137,8 @@ export async function exchangeCode(code: string): Promise<TokenResponse> {
   return (await r.json()) as TokenResponse;
 }
 
-export async function getMe(accessToken: string): Promise<{ id: string }> {
-  return spFetch<{ id: string }>("/me", accessToken);
+export async function getMe(accessToken: string): Promise<{ id: string; display_name?: string | null }> {
+  return spFetch<{ id: string; display_name?: string | null }>("/me", accessToken);
 }
 
 // Returns a valid access token, refreshing when within 5 minutes of expiry.

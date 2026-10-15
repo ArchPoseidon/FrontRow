@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { and, eq, ne } from "drizzle-orm";
 import { schema } from "@/lib/db";
 import { finishRun, startRun } from "@/lib/collectors/shared";
 import { requireUser } from "@/lib/session";
@@ -33,13 +34,18 @@ export async function GET(req: Request) {
   const code = url.searchParams.get("code");
   if (!code) return back("error");
 
+  let mySpotifyId = "";
+  let myName = "";
   try {
     const t = await exchangeCode(code);
     // Dev-mode apps only allow allowlisted users; /me fails with 403 for anyone else.
     const me = await getMe(t.access_token);
+    mySpotifyId = me.id;
+    myName = me.display_name ?? me.id;
     const values = {
       userId: ctx.user.id,
       spotifyUserId: me.id,
+      displayName: me.display_name ?? me.id,
       refreshToken: t.refresh_token ?? null,
       accessToken: t.access_token,
       expiresAt: new Date(Date.now() + t.expires_in * 1000),
@@ -62,5 +68,7 @@ export async function GET(req: Request) {
     await startBackgroundScan(ctx.db, ctx.user.id).catch((e) => console.error("background scan", e));
     await enrichArtists(ctx.db, r.newArtistIds);
   });
-  return back("imported", `&f=${r.followed}&t=${r.top}`);
+  // Say so when this Spotify account already belongs to another FrontRow account (the usual sign of a shared browser).
+  const [other] = await ctx.db.select({ u: schema.spotifyConnections.userId }).from(schema.spotifyConnections).where(and(eq(schema.spotifyConnections.spotifyUserId, mySpotifyId), ne(schema.spotifyConnections.userId, ctx.user.id))).limit(1);
+  return back("imported", `&f=${r.followed}&t=${r.top}&as=${encodeURIComponent(myName)}${other ? "&shared=1" : ""}`);
 }

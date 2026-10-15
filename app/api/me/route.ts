@@ -6,7 +6,7 @@ import { requireUser, unauthorized } from "@/lib/session";
 export async function GET() {
   const ctx = await requireUser();
   if (!ctx) return unauthorized();
-  const [sp] = await ctx.db.select({ broken: schema.spotifyConnections.broken }).from(schema.spotifyConnections).where(eq(schema.spotifyConnections.userId, ctx.user.id));
+  const [sp] = await ctx.db.select({ broken: schema.spotifyConnections.broken, name: schema.spotifyConnections.displayName }).from(schema.spotifyConnections).where(eq(schema.spotifyConnections.userId, ctx.user.id));
   const u = ctx.user;
   return Response.json({
     id: u.id,
@@ -17,7 +17,7 @@ export async function GET() {
     homeCity: u.homeCity,
     onboardingStep: u.onboardingStep,
     onboarded: !!u.onboardedAt,
-    spotify: sp ? { connected: true, broken: !!sp.broken } : { connected: false, broken: false },
+    spotify: sp ? { connected: true, broken: !!sp.broken, name: sp.name } : { connected: false, broken: false, name: null },
   });
 }
 

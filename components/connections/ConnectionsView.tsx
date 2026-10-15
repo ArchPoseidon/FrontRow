@@ -165,14 +165,25 @@ export function ConnectionsView({ initial }: { initial: Connections }) {
           <Logo ok={c.spotify.connected}><SpotifyMark size={52} /></Logo>
           <div className="min-w-0 flex-1">
             <h2 id="c-sp" className="font-display text-3xl leading-none font-extrabold">Spotify</h2>
-            <Status ok={c.spotify.connected} warn={c.spotify.broken ? "Connection lost. Reconnect to keep importing" : undefined} />
+            <Status ok={c.spotify.connected} on={c.spotify.name ? `Connected as ${c.spotify.name}` : "Connected"} warn={c.spotify.broken ? "Connection lost. Reconnect to keep importing" : undefined} />
           </div>
         </div>
         <p className="text-sm text-muted">Import the artists you follow and listen to. Read-only: we never post or change anything.</p>
-        <div>
+        <div className="flex flex-wrap gap-2">
           <ConnectSpotifyButton className={`inline-block ${c.spotify.connected ? btn : "rounded-card bg-[#1DB954] px-5 py-2.5 text-sm font-bold text-black"}`}>
             {c.spotify.connected ? "Re-import my artists" : c.spotify.broken ? "Reconnect Spotify" : "Connect Spotify"}
           </ConnectSpotifyButton>
+          {c.spotify.connected && (
+            <button
+              onClick={async () => {
+                await fetch("/api/spotify/disconnect", { method: "POST" }).catch(() => {});
+                window.location.href = "/api/spotify/login";
+              }}
+              className={`${btn} text-muted`}
+            >
+              Use a different account
+            </button>
+          )}
         </div>
       </section>
 

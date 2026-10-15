@@ -36,6 +36,13 @@
       "when": 1791790421955,
       "tag": "0004_first_scan_at",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792063520745,
+      "tag": "0005_spotify_display_name",
+      "breakpoints": true
     }
   ]
 }

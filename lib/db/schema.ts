@@ -88,6 +88,7 @@ export const spotifyConnections = pgTable("spotify_connections", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   spotifyUserId: text("spotify_user_id"),
+  displayName: text("display_name"), // the Spotify account name shown to the user ("Connected as ...")
   refreshToken: text("refresh_token"),
   accessToken: text("access_token"),
   expiresAt: tstz("expires_at"),
