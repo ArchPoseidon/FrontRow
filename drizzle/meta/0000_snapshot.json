@@ -1,5 +1,5 @@
 {
-  "id": "685a341c-7ee1-4238-802c-49ace1552514",
+  "id": "8873dc39-7598-427e-a566-c9e160edd3b4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -642,7 +642,7 @@
         },
         "last_india_date": {
           "name": "last_india_date",
-          "type": "text",
+          "type": "date",
           "primaryKey": false,
           "notNull": false
         },
@@ -1041,6 +1041,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "raw_item_id": {
+          "name": "raw_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "url": {
           "name": "url",
           "type": "text",
@@ -1098,6 +1104,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "event_sources_raw_item_id_raw_items_id_fk": {
+          "name": "event_sources_raw_item_id_raw_items_id_fk",
+          "tableFrom": "event_sources",
+          "tableTo": "raw_items",
+          "columnsFrom": [
+            "raw_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1162,6 +1181,13 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
         }
       },
       "indexes": {},
@@ -1201,7 +1227,7 @@
           "name": "artist_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "title": {
           "name": "title",
@@ -1229,7 +1255,7 @@
         },
         "event_date": {
           "name": "event_date",
-          "type": "text",
+          "type": "date",
           "primaryKey": false,
           "notNull": false
         },
@@ -1662,8 +1688,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "body": {
-          "name": "body",
+        "content": {
+          "name": "content",
           "type": "text",
           "primaryKey": false,
           "notNull": false

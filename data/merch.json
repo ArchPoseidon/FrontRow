@@ -1,0 +1,128 @@
+{
+  "products": [
+    {
+      "id": "pk-tee",
+      "artist": "Prateek Kuhad",
+      "name": "Prateek Kuhad Logo Tee",
+      "description": "Soft cotton tee with the wordmark. Placeholder product for the demo store.",
+      "image": [
+        "/merch/pk-tee.svg",
+        "/merch/pk-tee-b.svg"
+      ],
+      "priceInr": 1499,
+      "category": "tee",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stock": {
+        "S": 10,
+        "M": 10,
+        "L": 5,
+        "XL": 0
+      }
+    },
+    {
+      "id": "pk-hoodie",
+      "artist": "Prateek Kuhad",
+      "name": "Prateek Kuhad Hoodie",
+      "description": "Heavy fleece hoodie. Placeholder product for the demo store.",
+      "image": [
+        "/merch/pk-hoodie.svg",
+        "/merch/pk-hoodie-b.svg"
+      ],
+      "priceInr": 2999,
+      "category": "hoodie",
+      "sizes": [
+        "M",
+        "L",
+        "XL"
+      ],
+      "stock": {
+        "M": 4,
+        "L": 3,
+        "XL": 2
+      }
+    },
+    {
+      "id": "pk-poster",
+      "artist": "Prateek Kuhad",
+      "name": "Prateek Kuhad Tour Poster",
+      "description": "A3 print on matte paper. Placeholder product for the demo store.",
+      "image": [
+        "/merch/pk-poster.svg",
+        "/merch/pk-poster-b.svg"
+      ],
+      "priceInr": 599,
+      "category": "poster",
+      "sizes": [
+        "Free"
+      ],
+      "stock": {
+        "Free": 25
+      }
+    },
+    {
+      "id": "aj-tee",
+      "artist": "Anuv Jain",
+      "name": "Anuv Jain Tee",
+      "description": "Relaxed-fit tee. Placeholder product for the demo store.",
+      "image": [
+        "/merch/aj-tee.svg",
+        "/merch/aj-tee-b.svg"
+      ],
+      "priceInr": 1299,
+      "category": "tee",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stock": {
+        "S": 6,
+        "M": 8,
+        "L": 8,
+        "XL": 3
+      }
+    },
+    {
+      "id": "aj-tote",
+      "artist": "Anuv Jain",
+      "name": "Anuv Jain Canvas Tote",
+      "description": "Everyday canvas tote. Placeholder product for the demo store.",
+      "image": [
+        "/merch/aj-tote.svg",
+        "/merch/aj-tote-b.svg"
+      ],
+      "priceInr": 799,
+      "category": "accessory",
+      "sizes": [
+        "Free"
+      ],
+      "stock": {
+        "Free": 12
+      }
+    },
+    {
+      "id": "aj-poster",
+      "artist": "Anuv Jain",
+      "name": "Anuv Jain Poster",
+      "description": "A3 print on matte paper. Placeholder product for the demo store.",
+      "image": [
+        "/merch/aj-poster.svg",
+        "/merch/aj-poster-b.svg"
+      ],
+      "priceInr": 499,
+      "category": "poster",
+      "sizes": [
+        "Free"
+      ],
+      "stock": {
+        "Free": 0
+      }
+    }
+  ]
+}

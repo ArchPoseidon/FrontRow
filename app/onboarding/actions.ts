@@ -9,6 +9,7 @@ import { track } from "@/lib/activity";
 import { addSpotifyArtist, closeCandidate, resolveText, type AddResult } from "@/lib/identity/resolve";
 import { searchArtists, type SpotifyArtist } from "@/lib/identity/spotify";
 import { visibleArtist } from "@/lib/identity/store";
+import { startBackgroundScan } from "@/lib/brain/scan";
 import { MAJOR_CITIES } from "@/lib/util/cities";
 
 async function uid() {
@@ -69,7 +70,10 @@ export async function pasteAction(text: string): Promise<{ added: number; inacti
     else if (r.kind === "inactive") out.inactive.push(r.name);
     else out.choose.push(r);
   }
-  after(() => track("artists_added", userId, { count: out.added, via: "paste" }));
+  after(async () => {
+    await track("artists_added", userId, { count: out.added, via: "paste" });
+    if (out.added >= 3) await startBackgroundScan(getDb(), userId, 50_000);
+  });
   return out;
 }
 
@@ -109,7 +113,11 @@ export async function finishOnboardingAction() {
   const userId = await uid();
   await getDb().update(users).set({ onboardingStep: 3, onboardedAt: new Date() }).where(eq(users.id, userId));
   revalidateTag("suggestions", "max");
-  after(() => track("onboarding_done", userId));
+  // The first scan runs in the background; the radar shows results as they land (item 12).
+  after(async () => {
+    await track("onboarding_done", userId);
+    await startBackgroundScan(getDb(), userId, 50_000);
+  });
 }
 
 
@@ -126,6 +134,9 @@ export async function addKnownManyAction(artistIds: string[]): Promise<string[]>
   const userId = await uid();
   const rows = artistIds.length ? await getDb().select({ id: artists.id }).from(artists).where(and(inArray(artists.id, artistIds), visibleArtist)) : [];
   if (rows.length) await getDb().insert(userArtists).values(rows.map((r) => ({ userId, artistId: r.id, addedVia: "suggested" }))).onConflictDoNothing();
-  after(() => track("artists_added", userId, { count: rows.length, via: "suggested" }));
+  after(async () => {
+    await track("artists_added", userId, { count: rows.length, via: "suggested" });
+    if (rows.length >= 3) await startBackgroundScan(getDb(), userId, 50_000);
+  });
   return rows.map((r) => r.id);
 }

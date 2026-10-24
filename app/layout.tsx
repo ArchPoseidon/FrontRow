@@ -1,20 +1,42 @@
-import type { Metadata, Viewport } from "next";
-import { Big_Shoulders, Instrument_Sans } from "next/font/google";
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import { Big_Shoulders, Geist_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
+import { Backdrop } from "@/components/shell/Backdrop";
 
-const display = Big_Shoulders({ subsets: ["latin"], variable: "--font-big-shoulders", weight: ["700", "800"] });
-const sans = Instrument_Sans({ subsets: ["latin"], variable: "--font-instrument" });
+const instrument = Instrument_Sans({
+  variable: "--font-instrument",
+  subsets: ["latin"],
+});
+
+const bigShoulders = Big_Shoulders({
+  variable: "--font-big-shoulders",
+  subsets: ["latin"],
+  weight: ["700", "800", "900"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "FrontRow",
   description: "Be the first to know about a show.",
 };
-export const viewport: Viewport = { themeColor: "#140b1a", width: "device-width", initialScale: 1 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable}`}>
-      <body className="min-h-dvh antialiased">{children}</body>
+    <html
+      lang="en"
+      className={`${instrument.variable} ${bigShoulders.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col">
+        <Suspense fallback={<div aria-hidden className="fixed inset-0 -z-10 bg-background" />}>
+          <Backdrop />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }

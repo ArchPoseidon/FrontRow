@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -106,7 +107,7 @@ export const artists = pgTable(
     origin: text("origin").notNull().default("unknown"), // india|international|unknown
     identityStatus: text("identity_status").notNull().default("unverified"), // verified|needs_review|unverified
     lastIndiaShow: text("last_india_show"),
-    lastIndiaDate: text("last_india_date"),
+    lastIndiaDate: date("last_india_date"),
     lastCheckedAt: tstz("last_checked_at"),
     upcomingCount: integer("upcoming_count").notNull().default(0),
     isDeceased: boolean("is_deceased").notNull().default(false),
@@ -148,6 +149,7 @@ export const sources = pgTable("sources", {
   name: text("name").notNull().unique(),
   kind: text("kind").notNull(), // news_rss|listing|grounded_sweep|event_page
   url: text("url"),
+  config: jsonb("config"),
   intervalMinutes: integer("interval_minutes").notNull().default(30),
   lastRunAt: tstz("last_run_at"),
   lastOkAt: tstz("last_ok_at"),
@@ -164,7 +166,7 @@ export const rawItems = pgTable(
     sourceId: uuid("source_id").references(() => sources.id, { onDelete: "set null" }),
     url: text("url"),
     title: text("title"),
-    body: text("body"),
+    content: text("content"),
     contentHash: text("content_hash").notNull().unique(),
     artistHint: text("artist_hint"),
     status: text("status").notNull().default("new"), // new|processed|skipped|error
@@ -178,12 +180,12 @@ export const events = pgTable(
   "events",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    artistId: uuid("artist_id").references(() => artists.id, { onDelete: "cascade" }),
+    artistId: uuid("artist_id").notNull().references(() => artists.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     venue: text("venue"),
     city: text("city"),
     state: text("state"),
-    eventDate: text("event_date"), // YYYY-MM-DD
+    eventDate: date("event_date"),
     eventTime: text("event_time"),
     ticketUrl: text("ticket_url"),
     platform: text("platform"),
@@ -212,12 +214,14 @@ export const eventTiers = pgTable("event_tiers", {
   status: text("status").notNull().default("upcoming"), // upcoming|open|sold_out|closed
   opensAt: tstz("opens_at"),
   closesAt: tstz("closes_at"),
+  observedAt: tstz("observed_at").defaultNow(),
 });
 
 export const eventSources = pgTable(
   "event_sources",
   {
     eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+    rawItemId: uuid("raw_item_id").references(() => rawItems.id, { onDelete: "set null" }),
     url: text("url").notNull(),
     platform: text("platform"),
     status: text("status").notNull().default("unchecked"),

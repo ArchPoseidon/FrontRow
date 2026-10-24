@@ -73,7 +73,7 @@ CREATE TABLE "artists" (
 	"origin" text DEFAULT 'unknown' NOT NULL,
 	"identity_status" text DEFAULT 'unverified' NOT NULL,
 	"last_india_show" text,
-	"last_india_date" text,
+	"last_india_date" date,
 	"last_checked_at" timestamp with time zone,
 	"upcoming_count" integer DEFAULT 0 NOT NULL,
 	"is_deceased" boolean DEFAULT false NOT NULL,
@@ -115,6 +115,7 @@ CREATE TABLE "cart_items" (
 --> statement-breakpoint
 CREATE TABLE "event_sources" (
 	"event_id" uuid NOT NULL,
+	"raw_item_id" uuid,
 	"url" text NOT NULL,
 	"platform" text,
 	"status" text DEFAULT 'unchecked' NOT NULL,
@@ -132,17 +133,18 @@ CREATE TABLE "event_tiers" (
 	"price_inr" integer,
 	"status" text DEFAULT 'upcoming' NOT NULL,
 	"opens_at" timestamp with time zone,
-	"closes_at" timestamp with time zone
+	"closes_at" timestamp with time zone,
+	"observed_at" timestamp with time zone DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "events" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"artist_id" uuid,
+	"artist_id" uuid NOT NULL,
 	"title" text NOT NULL,
 	"venue" text,
 	"city" text,
 	"state" text,
-	"event_date" text,
+	"event_date" date,
 	"event_time" text,
 	"ticket_url" text,
 	"platform" text,
@@ -198,7 +200,7 @@ CREATE TABLE "raw_items" (
 	"source_id" uuid,
 	"url" text,
 	"title" text,
-	"body" text,
+	"content" text,
 	"content_hash" text NOT NULL,
 	"artist_hint" text,
 	"status" text DEFAULT 'new' NOT NULL,
@@ -323,6 +325,7 @@ ALTER TABLE "call_reminders" ADD CONSTRAINT "call_reminders_event_id_events_id_f
 ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_variant_id_merch_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."merch_variants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "event_sources" ADD CONSTRAINT "event_sources_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "event_sources" ADD CONSTRAINT "event_sources_raw_item_id_raw_items_id_fk" FOREIGN KEY ("raw_item_id") REFERENCES "public"."raw_items"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "event_tiers" ADD CONSTRAINT "event_tiers_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "events" ADD CONSTRAINT "events_artist_id_artists_id_fk" FOREIGN KEY ("artist_id") REFERENCES "public"."artists"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "merch_products" ADD CONSTRAINT "merch_products_artist_id_artists_id_fk" FOREIGN KEY ("artist_id") REFERENCES "public"."artists"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint

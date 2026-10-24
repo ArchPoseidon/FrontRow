@@ -11,3 +11,4 @@ export function getDb() {
 
 export type Db = ReturnType<typeof getDb>;
 export * from "./schema";
+export * as schema from "./schema";

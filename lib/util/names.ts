@@ -1,26 +1,32 @@
-export function normalizeName(s: string): string {
-  return s
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+// Lowercase, strip accents and punctuation, drop a leading "the" and the word "live".
+export function normalizeName(input: string): string {
+  const base = input
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/&/g, " and ")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/[^\p{L}\p{N}\s]/gu, " ");
+  const words = base
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((w, i) => !(i === 0 && w === "the") && w !== "live");
+  return words.join(" ") || input.trim().toLowerCase();
 }
 
-/** Aliases derived without AI: leading "the", "&"/"and". MusicBrainz adds real aliases later. */
+// Deterministic aliases only (no LLM): without a leading "The", and "&" <-> "and".
 export function derivedAliases(name: string): string[] {
   const out = new Set<string>();
-  const n = normalizeName(name);
-  if (n.startsWith("the ")) out.add(n.slice(4));
-  else out.add("the " + n);
-  if (/\band\b/.test(name.toLowerCase()) || name.includes("&")) {
-    out.add(normalizeName(name.replace(/&/g, " and ")));
-    out.add(normalizeName(name.replace(/\band\b/gi, " ")));
-  }
-  out.delete(n);
-  return [...out].filter(Boolean);
+  const trimmed = name.trim();
+  if (/^the\s+/i.test(trimmed)) out.add(trimmed.replace(/^the\s+/i, ""));
+  if (trimmed.includes("&")) out.add(trimmed.replace(/\s*&\s*/g, " and "));
+  if (/\band\b/i.test(trimmed)) out.add(trimmed.replace(/\s+and\s+/gi, " & "));
+  out.delete(trimmed);
+  return [...out];
+}
+
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "?") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
 }
 
 /** JS port of pg_trgm similarity(). */

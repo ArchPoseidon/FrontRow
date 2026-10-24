@@ -2,8 +2,22 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
-export default defineConfig([
+const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "scripts/**", // one-off operator scripts
+  ]),
+  {
+    // Loading data when a screen mounts (fetch, then set state) is intentional here.
+    rules: { "react-hooks/set-state-in-effect": "off" },
+  },
 ]);
+
+export default eslintConfig;

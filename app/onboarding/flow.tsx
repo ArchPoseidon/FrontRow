@@ -8,6 +8,7 @@ import {
 } from "./actions";
 import type { SpotifyArtist } from "@/lib/identity/spotify";
 import { MAJOR_CITIES } from "@/lib/util/cities";
+import { AlertsStep } from "./AlertsStep";
 
 type Sug = { id: string; name: string; image: string | null; genres: string[] };
 type Cand = { id: string; input: string; options: SpotifyArtist[] };
@@ -239,11 +240,7 @@ export function OnboardingFlow(props: {
       {step === 2 && (
         <>
           <h1 className="mt-3 font-display text-4xl uppercase">Get your alerts</h1>
-          <p className="mt-2 text-muted">Telegram alerts switch on here in the next build step. You can link Telegram from Profile any time.</p>
-          <div className="mt-6 flex gap-2">
-            <button onClick={() => setStep(1)} className="rounded-full bg-white/10 px-4 py-2">Back</button>
-            <button disabled={pending} onClick={finish} className="rounded-full bg-[var(--magenta)] px-5 py-2 font-semibold text-white">Go to my radar</button>
-          </div>
+          <AlertsStep onBack={() => setStep(1)} onFinish={finish} pending={pending} />
         </>
       )}
     </div>

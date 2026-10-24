@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { getDb, runs, spotifyConnections } from "@/lib/db";
 import { track } from "@/lib/activity";
 import { importForUser } from "@/lib/identity/spotify";
+import { startBackgroundScan } from "@/lib/brain/scan";
 import { enrichMany, linkArtist, unenrichedIds, upsertSpotifyArtist } from "@/lib/identity/store";
 import { verifyPayload } from "@/lib/util/sign";
 
@@ -81,6 +82,7 @@ export async function GET(req: Request) {
   after(async () => {
     await enrichMany(await unenrichedIds(ids), 40_000);
     await track("spotify_connect_ok", userId, { artists: imp.artists.length });
+    await startBackgroundScan(getDb(), userId, 34_000);
   });
   return NextResponse.redirect(new URL(`/onboarding?spotify=ok&n=${imp.artists.length}&f=${imp.followed}&t=${imp.top}`, url.origin));
 }

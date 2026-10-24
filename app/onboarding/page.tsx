@@ -15,6 +15,8 @@ const NOTICES: Record<string, string> = {
   error: "Spotify didn't connect. Skip and paste artists instead.",
 };
 
+export const maxDuration = 60;
+
 async function Body({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const [user, sp] = await Promise.all([requireUser(), searchParams]);
   const db = getDb();
