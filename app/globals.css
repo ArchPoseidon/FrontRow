@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #140b1a;
+  --ink-2: #1d1226;
+  --paper: #efe7f5;
+  --text: #f3ecf7;
+  --muted: #a99bb5;
+  --magenta: #d946a8;
+  --wordmark: #f6f1f8;
+  --wordmark-soft: #b98ad0;
+  --radius: 14px;
+  --stage-live: #e5484d;
+  --stage-soon: #8e4ec6;
+  --stage-announced: #f08a3c;
+  --stage-soldout: #4a4452;
+  --stage-rumor: #8a8393;
+}
+:root[data-theme="light"] {
+  --ink: #f6f1f8;
+  --ink-2: #ffffff;
+  --paper: #efe7f5;
+  --text: #1d1226;
+  --muted: #6c5f78;
+  --wordmark: #1d1226;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink-2);
+  --color-paper: var(--paper);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-magenta: var(--magenta);
+  --font-display: var(--font-big-shoulders), sans-serif;
+  --font-sans: var(--font-instrument), system-ui, sans-serif;
+}
+
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
