@@ -177,7 +177,7 @@ export function ConnectionsView({ initial }: { initial: Connections }) {
             <button
               onClick={async () => {
                 await fetch("/api/spotify/disconnect", { method: "POST" }).catch(() => {});
-                window.location.href = "/api/spotify/login";
+                window.location.href = "/api/spotify/connect";
               }}
               className={`${btn} text-muted`}
             >

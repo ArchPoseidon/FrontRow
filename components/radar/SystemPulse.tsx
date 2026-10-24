@@ -39,7 +39,14 @@ export function SystemPulse({ demo }: { demo?: boolean }) {
     try {
       const r = await fetch("/api/health", { cache: "no-store" });
       if (!r.ok) throw new Error();
-      setH(await r.json());
+      // /api/health is the public minimal shape ({sources:[{failures}], lastRuns}); fill in what the pulse needs.
+      const j = (await r.json()) as Omit<Partial<Health>, "sources"> & { lastRuns?: { job: string; finishedAt: string | null }[]; sources?: (Partial<Health["sources"][number]> & { name: string; failures?: number | null })[] };
+      setH({
+        checkedAt: j.checkedAt ?? new Date().toISOString(),
+        sources: (j.sources ?? []).map((x) => ({ name: x.name, enabled: x.enabled ?? true, lastRunAt: x.lastRunAt ?? x.lastOkAt ?? null, lastOkAt: x.lastOkAt ?? null, lastError: x.lastError ?? null, consecutiveFailures: x.consecutiveFailures ?? x.failures ?? 0, intervalMinutes: x.intervalMinutes ?? null })),
+        jobs: j.jobs ?? (j.lastRuns ?? []).map((x) => ({ job: x.job, startedAt: x.finishedAt, finishedAt: x.finishedAt })),
+        spotify: j.spotify ?? { connected: false, broken: false },
+      });
       setErr(false);
     } catch {
       setErr(true);
@@ -92,8 +99,8 @@ export function SystemPulse({ demo }: { demo?: boolean }) {
     }
   }
 
-  const last = h?.jobs.map((j) => j.startedAt).filter(Boolean).sort().pop() ?? null;
-  const red = h?.sources.filter((s) => (s.consecutiveFailures ?? 0) > 0 || s.lastError).length ?? 0;
+  const last = h?.jobs?.map((j) => j.startedAt).filter(Boolean).sort().pop() ?? null;
+  const red = h?.sources?.filter((s) => (s.consecutiveFailures ?? 0) > 0 || s.lastError).length ?? 0;
   return (
     <section aria-labelledby="pulse" className="space-y-3 rounded-card border border-surface-border bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">

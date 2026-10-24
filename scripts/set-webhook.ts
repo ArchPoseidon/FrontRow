@@ -13,6 +13,8 @@ async function main() {
     { command: "upcoming", description: "Your next shows" },
     { command: "artists", description: "Who you follow" },
     { command: "mute", description: "Mute an artist" },
+    { command: "cities", description: "Your P1 / P2 cities" },
+    { command: "calls", description: "Your call reminders" },
     { command: "help", description: "What I can do" },
   ] });
   console.log("webhook set:", url, await tg("getWebhookInfo", {}));

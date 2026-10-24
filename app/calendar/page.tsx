@@ -16,13 +16,13 @@ async function Loaded() {
   const db = getDb();
   const [u] = await db.select().from(schema.users).where(eq(schema.users.id, session.user.id));
   if (!u) redirect("/");
-  const events = (await getRadarEvents(db, viewerOf(u))).filter((e) => e.date);
+  const events = (await getRadarEvents(db, viewerOf(u), { includeUnwatched: true })).filter((e) => e.date);
   return (
     <>
       <AppHeader name={u.name} image={u.image} />
       <main className="mx-auto w-full max-w-3xl px-4 pt-6 pb-28 sm:pb-12">
         <h1 className="font-display mb-5 text-6xl leading-[0.9] font-black">Calendar</h1>
-        <CalendarView events={events} today={todayIST()} />
+        <CalendarView events={events} today={todayIST()} p1Cities={u.p1Cities ?? []} p2Cities={u.p2Cities ?? []} />
       </main>
     </>
   );

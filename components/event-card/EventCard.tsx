@@ -169,6 +169,7 @@ export function EventCard({
           ))}
           <span className="ml-1">Flip</span>
         </button>
+        {ev.city && <span data-testid="city-tag" className="min-w-0 truncate rounded-full border border-surface-border px-2 py-0.5 text-xs font-semibold">{ev.city}</span>}
         {!full && <Link href={`/event/${ev.id}`} className="text-xs text-muted underline underline-offset-2">Details</Link>}
       </div>
 

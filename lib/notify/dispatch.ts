@@ -8,6 +8,7 @@ import { alertEmail, digestEmail, type DigestGroup } from "./templates";
 import { appUrl, emailConfigured, sendEmail, unsubscribeUrl } from "./email";
 import { normalizeCity } from "@/lib/util/city";
 import { verifyBatch } from "@/lib/brain/process";
+import { track } from "@/lib/activity";
 
 export type DispatchStats = { sent: number; failed: number; skipped: number; waitingForEmailSetup: number; errors: string[] };
 
@@ -101,6 +102,7 @@ export async function dispatchAlerts(db: Db, limit = 20, onlyUserId?: string, pe
         await set({ status: "sent", sentAt: new Date() });
       }
       stats.sent++;
+      await track("alert_sent", a.userId, { urgency: a.urgency, channel: a.channel });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       stats.failed++;

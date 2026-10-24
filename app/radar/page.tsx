@@ -7,6 +7,7 @@ import { loadRadarPage } from "@/lib/data/page";
 import { RadarView } from "@/components/radar/RadarView";
 import { AppHeader } from "@/components/AppHeader";
 import { ScanBanner } from "@/components/radar/ScanBanner";
+import { CallMeServer } from "@/components/calls/CallMeServer";
 import { RadarSkeleton } from "@/components/radar/RadarSkeleton";
 
 const recentScan = (d: Date | null) => !!d && Date.now() - d.getTime() < 4 * 60_000;
@@ -31,7 +32,10 @@ async function Loaded() {
       </section>
       <main className="mx-auto w-full max-w-5xl px-4 pt-6 pb-28 sm:pb-12">
         {u.firstScanAt && recentScan(u.firstScanAt) && <ScanBanner since={u.firstScanAt.toISOString()} count={d.events.length} />}
-        <RadarView {...d} homeCity={u.homeCity ?? "Bengaluru"} hasArtists={d.artists.length > 0} />
+        <RadarView {...d} p1Cities={u.p1Cities ?? []} p2Cities={u.p2Cities ?? []} homeCity={u.homeCity ?? "Bengaluru"} hasArtists={d.artists.length > 0} />
+        <Suspense fallback={null}>
+          <CallMeServer userId={u.id} />
+        </Suspense>
       </main>
     </>
   );

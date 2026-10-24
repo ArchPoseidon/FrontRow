@@ -1,5 +1,5 @@
 import { after } from "next/server";
-import { and, desc, eq, gte, ilike, isNull, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { getDb, schema, type Db } from "@/lib/db";
 import { answerCallback, editCaption, editReplyMarkupOnly, editText, esc, sendMessage } from "@/lib/notify/telegram";
 import { telegramButtons, ticketReplyText } from "@/lib/notify/caption";
@@ -10,6 +10,8 @@ import { normalizeName } from "@/lib/identity/normalize";
 import { deliverTelegram, dispatchAlerts } from "@/lib/notify/dispatch";
 import { reportWrongLink } from "@/lib/links/report";
 import { track } from "@/lib/activity";
+import { MAJOR_CITIES } from "@/lib/util/cities";
+import { normalizeCity } from "@/lib/util/city";
 import { verifyBatch } from "@/lib/brain/process";
 import { todayIST } from "@/lib/util/ist";
 import { decideForEvents } from "@/lib/brain/decide";
@@ -33,6 +35,8 @@ const HELP = [
   "/upcoming – your next shows",
   "/artists – who you follow",
   "/mute &lt;artist&gt; – stop alerts for an artist",
+  "/cities – see and change your P1 / P2 cities",
+  "/calls – your voice call reminders (list, cancel)",
   "/help – this message",
 ].join("\n");
 
@@ -80,6 +84,7 @@ async function handleMessage(db: Db, chatId: number, text: string) {
     const [prev] = await db.select({ email: schema.users.email, id: schema.users.id }).from(schema.users).where(eq(schema.users.telegramChatId, chatId));
     await db.update(schema.users).set({ telegramChatId: null }).where(eq(schema.users.telegramChatId, chatId));
     await db.update(schema.users).set({ telegramChatId: chatId, telegramLinkCode: null, telegramEnabled: true }).where(eq(schema.users.id, u.id));
+    after(() => track("telegram_linked", u.id));
     // Linked: queue Telegram alerts for everything already found for this user's artists and send the first ones now,
     // so a new user sees the product working straight away. The scheduled dispatch job sends the rest.
     after(async () => {
@@ -181,6 +186,62 @@ async function handleMessage(db: Db, chatId: number, text: string) {
       if (!pick) return sendMessage(chatId, rows.length ? `Which one? ${rows.slice(0, 6).map((r) => esc(r.name)).join(", ")}. Send /mute with the full name.` : `You don't follow “${esc(arg)}”.`);
       await db.update(schema.userArtists).set({ priority: "muted" }).where(and(eq(schema.userArtists.userId, user.id), eq(schema.userArtists.artistId, pick.id)));
       return sendMessage(chatId, `🔕 Muted ${esc(pick.name)}. You can unmute in FrontRow.`);
+    }
+    case "/cities": {
+      const show = (u: typeof user) => [`<b>Your cities</b>`, `P1 (instant): ${u.p1Cities?.length ? esc(u.p1Cities.join(", ")) : "none"}`, `P2 (also tell me): ${u.p2Cities?.length ? esc(u.p2Cities.join(", ")) : "none"}`, `All India (digest only): ${u.watchAllIndia ? "on" : "off"}`].join("\n");
+      const [verb, ...restWords] = arg.split(/\s+/);
+      const v = (verb ?? "").toLowerCase();
+      if (!v) return sendMessage(chatId, `${show(user)}\n\nChange: /cities p1 Mumbai, Pune · /cities p2 Delhi NCR · /cities all on|off\nPick from: ${MAJOR_CITIES.join(", ")}`);
+      if (v === "all") {
+        const on = /^(on|yes|1|true)$/i.test(restWords[0] ?? "");
+        await db.update(schema.users).set({ watchAllIndia: on }).where(eq(schema.users.id, user.id));
+        return sendMessage(chatId, `All India is now ${on ? "on" : "off"}.`);
+      }
+      if (v === "p1" || v === "p2") {
+        const wanted = restWords.join(" ").split(/[,;]+/).map((x) => x.trim()).filter(Boolean);
+        const picked = [...new Set(wanted.map((w) => MAJOR_CITIES.find((m) => normalizeCity(m) === normalizeCity(w))).filter(Boolean) as string[])];
+        if (wanted.length && !picked.length) return sendMessage(chatId, `I didn't recognise those. Pick from: ${MAJOR_CITIES.join(", ")}`);
+        const p1 = v === "p1" ? picked.slice(0, 3) : (user.p1Cities ?? []).filter((c) => !picked.includes(c));
+        const p2 = v === "p2" ? picked.filter((c) => !p1.includes(c)).slice(0, 5) : (user.p2Cities ?? []).filter((c) => !p1.includes(c));
+        const [fresh] = await db.update(schema.users).set({ p1Cities: p1, p2Cities: p2, homeCity: p1[0] ?? user.homeCity }).where(eq(schema.users.id, user.id)).returning();
+        return sendMessage(chatId, `✅ Saved.\n\n${show(fresh)}`);
+      }
+      return sendMessage(chatId, "Try /cities, /cities p1 Mumbai, /cities p2 Pune or /cities all off.");
+    }
+    case "/calls": {
+      const rows = await db
+        .select({ id: schema.callReminders.id, at: schema.callReminders.scheduledFor, status: schema.callReminders.status, artist: schema.artists.name, city: schema.events.city })
+        .from(schema.callReminders)
+        .innerJoin(schema.artists, eq(schema.artists.id, schema.callReminders.artistId))
+        .innerJoin(schema.events, eq(schema.events.id, schema.callReminders.eventId))
+        .where(and(eq(schema.callReminders.userId, user.id), inArray(schema.callReminders.status, ["scheduled", "calling"])))
+        .orderBy(schema.callReminders.scheduledFor);
+      const [a, b] = arg.toLowerCase().split(/\s+/);
+      if (a === "cancel") {
+        const target = b === "all" ? rows : rows.filter((_, i) => String(i + 1) === b);
+        if (!target.length) return sendMessage(chatId, "Tell me which one: /calls cancel 1, or /calls cancel all.");
+        await db.update(schema.callReminders).set({ status: "cancelled" }).where(inArray(schema.callReminders.id, target.map((t) => t.id)));
+        return sendMessage(chatId, `Cancelled ${target.length} call reminder${target.length === 1 ? "" : "s"}.`);
+      }
+      const on = process.env.VOICE_CALLS_ENABLED === "true";
+      if (!rows.length) return sendMessage(chatId, `No call reminders scheduled.${on ? "" : " Voice calls switch on soon."}`);
+      const fmt = (d: Date) => new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(d);
+      return sendMessage(chatId, [`<b>Your call reminders</b>${on ? "" : " (voice calls switch on soon)"}`, ...rows.map((r, i) => `${i + 1}. ${esc(r.artist)}${r.city ? ` · ${esc(r.city)}` : ""} · ${fmt(r.at)}`), "", "Cancel with /calls cancel 1 or /calls cancel all"].join("\n"));
+    }
+    case "/stats": {
+      if (!user.isOwner) return sendMessage(chatId, "That command is for the app owner only.");
+      const day = new Date(Date.now() - 86400_000);
+      const week = new Date(Date.now() - 7 * 86400_000);
+      const [[total], [newWeek], [dau], [linked], [alertsToday], red] = await Promise.all([
+        db.select({ n: count() }).from(schema.users),
+        db.select({ n: count() }).from(schema.users).where(gte(schema.users.createdAt, week)),
+        db.select({ n: count() }).from(schema.users).where(gte(schema.users.lastSeenAt, day)),
+        db.select({ n: count() }).from(schema.users).where(sql`${schema.users.telegramChatId} is not null`),
+        db.select({ n: count() }).from(schema.alerts).where(and(eq(schema.alerts.status, "sent"), gte(schema.alerts.sentAt, day))),
+        db.select({ name: schema.sources.name, f: schema.sources.consecutiveFailures }).from(schema.sources).where(gte(schema.sources.consecutiveFailures, 3)),
+      ]);
+      const pct = total.n ? Math.round((linked.n / total.n) * 100) : 0;
+      return sendMessage(chatId, [`<b>FrontRow stats</b>`, `Users: ${total.n} (+${newWeek.n} in 7 days)`, `Active in 24h: ${dau.n}`, `Telegram linked: ${linked.n} (${pct}%)`, `Alerts sent in 24h: ${alertsToday.n}`, red.length ? `⚠️ Failing sources: ${esc(red.map((r) => r.name).join(", "))}` : "Pipeline: no red flags"].join("\n"));
     }
     case "/crawlers": {
       if (!user.isOwner) return sendMessage(chatId, "That command is for the app owner only.");

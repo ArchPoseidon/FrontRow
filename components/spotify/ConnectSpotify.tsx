@@ -63,14 +63,14 @@ export function ConnectSpotifyButton({ children, className }: { children: React.
   return (
     <>
       <a
-        href="/api/spotify/login"
+        href="/api/spotify/connect"
         onClick={(e) => {
           e.preventDefault();
           setBusy(true);
           setSlow(false);
           // Next frame: let the overlay paint, then go. No timer to lose.
           requestAnimationFrame(() => {
-            window.location.assign("/api/spotify/login");
+            window.location.assign("/api/spotify/connect");
           });
         }}
         className={className}
@@ -84,7 +84,7 @@ export function ConnectSpotifyButton({ children, className }: { children: React.
             <div className="fixed inset-x-0 bottom-10 z-[60] flex flex-col items-center gap-3 px-6 text-center text-sm">
               <p className="text-white/80">Not moving?</p>
               <div className="flex gap-3">
-                <a href="/api/spotify/login" className="rounded-card bg-[#1DB954] px-5 py-2.5 font-bold text-black">Open Spotify</a>
+                <a href="/api/spotify/connect" className="rounded-card bg-[#1DB954] px-5 py-2.5 font-bold text-black">Open Spotify</a>
                 <button onClick={() => setBusy(false)} className="rounded-card border border-white/40 px-5 py-2.5 font-bold">Cancel</button>
               </div>
             </div>

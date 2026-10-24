@@ -1,17 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { EventCard } from "@/components/event-card/EventCard";
 import { ToastView, useEventActions } from "@/components/event-card/useEventActions";
 import type { EventView } from "@/components/event-card/types";
+import { cityChips, matchesCity } from "@/lib/data/show-filters";
+import { CityChips } from "@/components/radar/CityChips";
+import { useShowFilters } from "@/components/radar/useShowFilters";
 
 // Going (bought or planning) and Saved (keep an eye on), each a stack of flip tickets.
-export function ShowsView({ events: initial }: { events: EventView[] }) {
+export function ShowsView({ events: initial, p1Cities = [], p2Cities = [] }: { events: EventView[]; p1Cities?: string[]; p2Cities?: string[] }) {
   const { events, mark, toggleCalendar, toast, clearToast } = useEventActions(initial, { returnTo: "/shows" });
   const [tab, setTab] = useState<"going" | "saved">("going");
-  const going = events.filter((e) => e.mine === "going");
-  const saved = events.filter((e) => e.mine === "saved");
+  const { city, setCity } = useShowFilters("shows");
+  const prefs = useMemo(() => ({ p1: p1Cities, p2: p2Cities }), [p1Cities, p2Cities]);
+  const cities = useMemo(() => cityChips(events, prefs), [events, prefs]);
+  const activeCity = city && cities.some((c) => c.slug === city) ? city : null;
+  const going = events.filter((e) => e.mine === "going" && matchesCity(e, activeCity));
+  const saved = events.filter((e) => e.mine === "saved" && matchesCity(e, activeCity));
   const list = tab === "going" ? going : saved;
 
   return (
@@ -24,6 +31,7 @@ export function ShowsView({ events: initial }: { events: EventView[] }) {
         ))}
         <Link href="/calendar" className="font-display flex-1 rounded-md px-2 py-3.5 text-center text-2xl leading-none font-extrabold text-muted hover:text-foreground sm:text-3xl">Calendar</Link>
       </div>
+      <CityChips chips={cities} total={events.length} active={activeCity} onPick={setCity} />
       {list.length === 0 ? (
         <div className="rounded-card border border-dashed border-surface-border p-10 text-center">
           <p className="font-display text-3xl font-extrabold">{tab === "going" ? "Nothing booked yet" : "Nothing saved yet"}</p>

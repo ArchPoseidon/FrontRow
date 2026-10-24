@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
@@ -16,7 +17,9 @@ async function logStep(errors: unknown[], itemsIn = 0) {
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const back = (code: string) => NextResponse.redirect(new URL(`/onboarding?spotify=${code}`, url.origin));
+  const nextPage = (await cookies()).get("sp_next")?.value;
+  const base = nextPage === "setup" ? "/setup" : nextPage === "connections" ? "/connections" : "/onboarding";
+  const back = (code: string) => NextResponse.redirect(new URL(`${base}?spotify=${code}`, url.origin));
   const session = await auth();
   if (!session?.user?.id) return NextResponse.redirect(new URL("/", url.origin));
   const userId = session.user.id;
@@ -53,7 +56,7 @@ export async function GET(req: Request) {
   const me = await fetch("https://api.spotify.com/v1/me", { headers: { Authorization: `Bearer ${t.access_token}` }, signal: AbortSignal.timeout(8000) }).catch(() => null);
   if (!me || !me.ok) {
     const status = me?.status ?? 0;
-    await logStep([{ step: "me", status, body: me ? (await me.text()).slice(0, 300) : "timeout" }]);
+    await logStep([{ step: "me", status, body: me ? (await me.text()).slice(0, 300) : "timeout", email: session.user.email ?? null }]);
     after(() => track("spotify_connect_fail", userId, { status }));
     return back(status === 403 ? "forbidden" : status >= 500 || !status ? "slow" : "error");
   }
@@ -84,5 +87,5 @@ export async function GET(req: Request) {
     await track("spotify_connect_ok", userId, { artists: imp.artists.length });
     await startBackgroundScan(getDb(), userId, 34_000);
   });
-  return NextResponse.redirect(new URL(`/onboarding?spotify=ok&n=${imp.artists.length}&f=${imp.followed}&t=${imp.top}`, url.origin));
+  return NextResponse.redirect(new URL(`${base}?spotify=ok&n=${imp.artists.length}&f=${imp.followed}&t=${imp.top}`, url.origin));
 }

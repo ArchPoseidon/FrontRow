@@ -15,6 +15,8 @@ const JOBS: { title: string; path: string; minutes: number[]; hours?: number[] }
   { title: "FrontRow links", path: "/api/jobs/links", minutes: every(10) },
   { title: "FrontRow listings", path: "/api/jobs/listings", minutes: [0, 30] },
   { title: "FrontRow digest", path: "/api/jobs/digest", minutes: [0], hours: [9] },
+  { title: "FrontRow artist news", path: "/api/jobs/artist-news", minutes: [10], hours: [0, 6, 12, 18] },
+  { title: "FrontRow calls", path: "/api/jobs/calls", minutes: every(5) },
   { title: "FrontRow sweep", path: "/api/jobs/sweep", minutes: [0, 30], hours: [6, 7, 8, 9, 10] },
 ];
 

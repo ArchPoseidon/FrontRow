@@ -19,7 +19,7 @@ async function Loaded() {
       <AppHeader name={u.name} image={u.image} />
       <main className="mx-auto w-full max-w-5xl px-4 pt-6 pb-28 sm:pb-12">
         <h1 className="font-display mb-5 text-6xl leading-[0.9] font-black">My shows</h1>
-        <ShowsView events={events} />
+        <ShowsView events={events} p1Cities={u.p1Cities ?? []} p2Cities={u.p2Cities ?? []} />
       </main>
     </>
   );

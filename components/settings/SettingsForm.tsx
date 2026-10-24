@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type S = { name: string | null; email: string | null; image: string | null; homeCity: string; watchCities: string[]; emailEnabled: boolean; telegramLinked: boolean; emailAvailable: boolean; cities: string[] };
+type S = { name: string | null; email: string | null; image: string | null; homeCity: string; p1Cities: string[]; p2Cities: string[]; watchAllIndia: boolean; emailEnabled: boolean; telegramLinked: boolean; emailAvailable: boolean; cities: string[] };
 type Link = { linked: boolean; url?: string | null; configured?: boolean };
 
 export function SettingsForm({ isOwner, embedded }: { isOwner: boolean; embedded?: boolean }) {
@@ -56,50 +56,41 @@ export function SettingsForm({ isOwner, embedded }: { isOwner: boolean; embedded
   }
 
   if (!s) return msg ? <p role="alert" className="text-sm">{msg.text}</p> : <div className="space-y-4">{[0, 1, 2].map((i) => <div key={i} className="h-28 animate-pulse rounded-card bg-surface-border" />)}</div>;
-  const all = s.watchCities.includes("ALL_INDIA");
   const card = "space-y-3 rounded-card border border-surface-border bg-surface p-4";
+  const pickP1 = (c: string) => {
+    const on = s.p1Cities.includes(c);
+    if (!on && s.p1Cities.length >= 3) return;
+    const p1 = on ? s.p1Cities.filter((x) => x !== c) : [...s.p1Cities, c];
+    save({ p1Cities: p1, p2Cities: s.p2Cities.filter((x) => !p1.includes(x)) });
+  };
+  const pickP2 = (c: string) => {
+    if (s.p1Cities.includes(c)) return;
+    const on = s.p2Cities.includes(c);
+    if (!on && s.p2Cities.length >= 5) return;
+    save({ p2Cities: on ? s.p2Cities.filter((x) => x !== c) : [...s.p2Cities, c] });
+  };
+  const chip = (on: boolean, off?: boolean) => `rounded-full border px-3 py-1.5 text-sm ${on ? "border-magenta bg-magenta text-white" : "border-surface-border"} ${off ? "opacity-40" : ""}`;
   return (
     <div className="flex flex-col gap-6">
       {msg && <p role="status" className={`rounded-card border px-4 py-2 text-sm ${msg.tone === "ok" ? "border-emerald-500/60" : "border-urgency-red/60"}`}>{msg.text}</p>}
 
       {!embedded && <section className={card}>
         <h2 className="font-semibold">Profile</h2>
-        <div className="flex items-center gap-3">
-          {s.image && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={s.image} alt="" width={48} height={48} className="rounded-full" referrerPolicy="no-referrer" />
-          )}
-          <div>
-            <p className="font-medium">{s.name}</p>
-            <p className="text-sm text-muted">{s.email} · from your Google account</p>
-          </div>
-        </div>
+        <p className="font-medium">{s.name}</p>
+        <p className="text-sm text-muted">{s.email} · from your Google account</p>
       </section>}
 
       <section className={card}>
         <h2 className="font-semibold">Cities</h2>
-        <label className="block text-sm">
-          <span className="text-muted">Home city (loudest alerts)</span>
-          <select value={s.homeCity} onChange={(e) => save({ homeCity: e.target.value })} className="mt-1 w-full rounded-card border border-surface-border bg-background px-3 py-2.5">
-            {[...new Set([s.homeCity, ...s.cities])].map((c) => <option key={c}>{c}</option>)}
-          </select>
-        </label>
+        <p className="text-sm text-muted">P1 cities get an instant alert (up to 3). P2 cities get one when tickets open or the artist is must-see (up to 5).</p>
+        <h3 className="text-sm font-semibold">P1 · alert me instantly ({s.p1Cities.length}/3)</h3>
+        <ul className="flex flex-wrap gap-2">{s.cities.map((c) => <li key={c}><button aria-pressed={s.p1Cities.includes(c)} onClick={() => pickP1(c)} className={chip(s.p1Cities.includes(c), !s.p1Cities.includes(c) && s.p1Cities.length >= 3)}>{c}</button></li>)}</ul>
+        <h3 className="text-sm font-semibold">P2 · also tell me ({s.p2Cities.length}/5)</h3>
+        <ul className="flex flex-wrap gap-2">{s.cities.filter((c) => !s.p1Cities.includes(c)).map((c) => <li key={c}><button aria-pressed={s.p2Cities.includes(c)} onClick={() => pickP2(c)} className={chip(s.p2Cities.includes(c), !s.p2Cities.includes(c) && s.p2Cities.length >= 5)}>{c}</button></li>)}</ul>
         <label className="flex items-center gap-3 text-sm">
-          <input type="checkbox" checked={all} onChange={() => save({ watchCities: all ? [s.homeCity] : ["ALL_INDIA"] })} className="h-4 w-4 accent-[var(--accent)]" />
-          All India
+          <input type="checkbox" checked={s.watchAllIndia} onChange={() => save({ watchAllIndia: !s.watchAllIndia })} className="h-4 w-4 accent-[var(--magenta)]" />
+          All India (other cities arrive in the daily digest)
         </label>
-        {!all && (
-          <ul className="flex flex-wrap gap-2">
-            {s.cities.map((c) => {
-              const on = s.watchCities.includes(c) || c === s.homeCity;
-              return (
-                <li key={c}>
-                  <button disabled={c === s.homeCity} aria-pressed={on} onClick={() => save({ watchCities: s.watchCities.includes(c) ? s.watchCities.filter((x) => x !== c) : [...s.watchCities, c] })} className={`rounded-full border px-3 py-1.5 text-sm ${on ? "border-accent bg-accent text-accent-foreground" : "border-surface-border"}`}>{c}</button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
       </section>
 
       {!isOwner && (

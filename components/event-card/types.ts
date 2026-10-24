@@ -34,6 +34,7 @@ export type EventView = {
   concertImage?: string | null; // a photo from this artist's own concert, when we have one
   notFollowed?: boolean; // shown only because tickets are live; the viewer does not follow this artist yet
   inCalendar?: boolean; // added to the viewer's calendar
+  watched?: boolean; // false: a followed artist's show in a city the viewer does not watch (only the calendar's favourites view lists these)
   artistGenres?: string[];
 };
 

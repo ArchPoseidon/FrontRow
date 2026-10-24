@@ -3,6 +3,8 @@ import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
 import { accounts, getDb, sessions, users, verificationTokens } from "@/lib/db";
+import { track } from "@/lib/activity";
+import { persistGoogleTokens } from "@/lib/gcal";
 
 export const { handlers, auth, signIn, signOut } = NextAuth(() => {
   const db = getDb();
@@ -40,7 +42,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
       },
     },
     events: {
-      async signIn({ user }) {
+      async createUser({ user }) {
+        if (user.id) await track("signup", user.id);
+      },
+      async signIn({ user, account }) {
+        if (user.id) await track("login", user.id);
+        // Re-consent hands us fresh tokens and scope; the adapter only stores them on first link.
+        if (user.id && account) await persistGoogleTokens(db, user.id, account).catch(() => {});
         const owner = process.env.OWNER_EMAIL?.toLowerCase();
         if (user.id && owner && user.email?.toLowerCase() === owner) {
           await db.update(users).set({ isOwner: true }).where(eq(users.id, user.id));

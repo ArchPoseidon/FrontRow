@@ -41,7 +41,7 @@ export type Viewer = { userId: string } & CityPrefs;
 // Upcoming real events for a viewer's non-muted artists, with urgency computed for that viewer.
 // `elsewhere`: instead of the viewer's own artists, shows on sale right now for artists they do not follow yet
 // (real, sourced events), so a new user's "On sale now" is never empty.
-export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDismissed?: boolean; elsewhere?: { limit: number } } = {}): Promise<EventView[]> {
+export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDismissed?: boolean; includeUnwatched?: boolean; elsewhere?: { limit: number } } = {}): Promise<EventView[]> {
   const today = todayIST();
   const base = and(ne(schema.events.status, "cancelled"), or(isNull(schema.events.eventDate), gte(schema.events.eventDate, today)), eq(schema.events.isSample, false), visibleArtist);
   let rows: { e: typeof schema.events.$inferSelect; a: typeof schema.artists.$inferSelect; priority: string | null }[];
@@ -86,7 +86,7 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
     const mySrc = visibleSources(srcs.filter((s) => s.eventId === e.id));
     const distinct = new Set(mySrc.map((s) => (s.platform ?? new URL(s.url).hostname).toLowerCase()));
     const urgency = computeUrgency({ ...e, ticketUrl: ticketLinkOf(e), sourceCount: distinct.size, tiers: my }, { p1Cities: viewer.p1Cities, p2Cities: viewer.p2Cities, watchAllIndia: viewer.watchAllIndia, homeCity: viewer.homeCity, priority });
-    if (!urgency && !opts.elsewhere) continue; // a city this viewer does not watch
+    if (!urgency && !opts.elsewhere && !opts.includeUnwatched) continue; // a city this viewer does not watch (the calendar keeps them: all upcoming shows of followed artists)
     const isDismissed = dis.has(e.id);
     if (isDismissed && !opts.includeDismissed) continue;
     const { reason, countdown } = reasonAndCountdown(e, my);
@@ -118,6 +118,7 @@ export async function getRadarEvents(db: Db, viewer: Viewer, opts: { includeDism
       mine: marks.get(e.id) ?? null,
       inCalendar: inCal.has(e.id),
       notFollowed: !!opts.elsewhere,
+      watched: !!urgency,
     });
   }
   const rank = { red: 0, amber: 1, info: 2 } as const;

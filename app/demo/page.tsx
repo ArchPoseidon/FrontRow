@@ -31,7 +31,7 @@ async function Loaded() {
         </div>
       </section>
       <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        <RadarView {...d} homeCity={owner.homeCity ?? "Bengaluru"} readOnly hasArtists={d.artists.length > 0} />
+        <RadarView {...d} p1Cities={owner.p1Cities ?? []} p2Cities={owner.p2Cities ?? []} homeCity={owner.homeCity ?? "Bengaluru"} readOnly hasArtists={d.artists.length > 0} />
       </main>
     </>
   );

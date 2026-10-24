@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Big_Shoulders, Geist_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
-import { Backdrop } from "@/components/shell/Backdrop";
+import { SceneHost } from "@/components/shell/SceneHost";
 
 const instrument = Instrument_Sans({
   variable: "--font-instrument",
@@ -33,9 +33,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <Suspense fallback={<div aria-hidden className="fixed inset-0 -z-10 bg-background" />}>
-          <Backdrop />
+          <SceneHost />
         </Suspense>
-        {children}
+        <div className="relative z-10 flex flex-1 flex-col">{children}</div>
       </body>
     </html>
   );

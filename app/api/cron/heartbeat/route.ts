@@ -1,4 +1,4 @@
-import { and, count, eq, gte, ne } from "drizzle-orm";
+import { and, count, eq, gte, ne, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { cronAuthorized, forbidden } from "@/lib/jobs";
 import { creditsUsedToday, dailyCap } from "@/lib/firecrawl";
@@ -6,6 +6,9 @@ import { monthlyCap as sdMonthly, scrapedoUsed } from "@/lib/scrapedo";
 import { esc, sendMessage } from "@/lib/notify/telegram";
 import { appUrl, emailConfigured, sendEmail } from "@/lib/notify/email";
 import { finishRun, startRun } from "@/lib/collectors/shared";
+import { recheckDeceased } from "@/lib/identity/deceased";
+import { activityEvents } from "@/lib/db";
+import { lt } from "drizzle-orm";
 
 export const maxDuration = 60;
 
@@ -16,6 +19,14 @@ export async function GET(req: Request) {
   const run = await startRun(db, "heartbeat");
   try {
     const since = new Date(Date.now() - 24 * 3600 * 1000);
+    // Housekeeping first: activity events are kept 180 days; deceased/disbanded artists re-checked every 30 days.
+    await db.delete(activityEvents).where(lt(activityEvents.createdAt, new Date(Date.now() - 180 * 24 * 3600 * 1000))).catch(() => {});
+    const dec = await recheckDeceased(25_000).catch(() => ({ checked: 0, hidden: [] as string[] }));
+    const [[newUsers], [activeUsers], [reports]] = await Promise.all([
+      db.select({ n: count() }).from(schema.users).where(gte(schema.users.createdAt, since)),
+      db.select({ n: count() }).from(schema.users).where(gte(schema.users.lastSeenAt, since)),
+      db.select({ n: sql<number>`coalesce(sum(${schema.events.ticketReportCount}), 0)::int` }).from(schema.events).where(gte(schema.events.updatedAt, since)),
+    ]);
     const [sources, [events], [alerts], used, [owner], [spotify], links, runs] = await Promise.all([
       db.select().from(schema.sources),
       db.select({ n: count() }).from(schema.events).where(and(gte(schema.events.firstSeenAt, since), eq(schema.events.isSample, false))),
@@ -38,15 +49,18 @@ export async function GET(req: Request) {
       `Sources OK: ${ok}/${sources.length}${never ? ` (${never} not run yet)` : ""}`,
       `New shows (24h): ${events.n}`,
       `Alerts sent (24h): ${alerts.n}`,
+      `New users (24h): ${newUsers.n} · active users (24h): ${activeUsers.n}`,
       `Firecrawl credits (24h): ${used}/${dailyCap()}`,
       `Ticket links: ${lc.exact ?? 0} verified, ${(lc.unchecked ?? 0) + (lc.blocked ?? 0)} pending, ${(lc.generic ?? 0) + (lc.broken ?? 0) + (lc.mismatch ?? 0) + (lc.none ?? 0)} without a direct page`,
       `Backup crawler (Scrape.do): ${sd.day} credits today, ${sd.month}/${sdMonthly()} this month`,
       `Job runs (24h): ${real.length} across ${jobsRan} jobs`,
     ];
+    if (reports.n) lines.push(`🟠 Wrong-link reports on recently updated shows: ${reports.n} (links pulled and re-checked)`);
+    if (dec.hidden.length) lines.push(`🕯 Hidden as deceased/disbanded: ${esc(dec.hidden.join(", ").slice(0, 300))}. Wrong? Unhide in the admin site.`);
     if (spotify?.spotify_connections?.broken) lines.push("🔴 Spotify connection is broken: reconnect it in Setup");
     if (!real.length) lines.push("🔴 No jobs ran in the last 24 hours. Check cron-job.org");
-    const refused = runs.filter((r) => r.job === "spotify-connect");
-    if (refused.length) lines.push(`🟠 Spotify refused ${refused.length} connection${refused.length === 1 ? "" : "s"} in 24h (the account probably is not on the Spotify app's user list). ${esc(String((refused[0].errors as string[] | null)?.[0] ?? "").slice(0, 100))}`);
+    const refused = runs.filter((r) => r.job === "spotify-connect" && Array.isArray(r.errors) && r.errors.length > 0);
+    if (refused.length) lines.push(`🟠 Spotify refused ${refused.length} connection${refused.length === 1 ? "" : "s"} in 24h (the account probably is not on the Spotify app's user list). ${esc(JSON.stringify(((refused[0].errors as unknown[]) ?? [])[0] ?? "").slice(0, 160))}`);
     for (const s of bad) lines.push(`🔴 ${esc(s.name)}: ${esc((s.lastError ?? (s.enabled ? "failing" : "disabled")).slice(0, 80))}`);
     // A Telegram chat can be linked to one account at a time, so the owner's report is pinned to a fixed chat when
     // OWNER_TELEGRAM_CHAT_ID is set; otherwise it uses the owner account's linked chat.

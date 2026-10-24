@@ -1,52 +1,48 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EventCard } from "@/components/event-card/EventCard";
 import { ToastView, useEventActions } from "@/components/event-card/useEventActions";
 import type { EventView } from "@/components/event-card/types";
+import { calendarCounts, cityChips, filterCalendar, type CalFilter } from "@/lib/data/show-filters";
+import { SearchBox } from "@/components/radar/SearchBox";
+import { CityChips } from "@/components/radar/CityChips";
+import { useShowFilters } from "@/components/radar/useShowFilters";
 
 const DOT: Record<string, string> = { live: "bg-stage-live", soon: "bg-stage-soon", announced: "bg-stage-announced", soldout: "bg-stage-soldout", rumor: "bg-urgency-info" };
 const pad = (n: number) => String(n).padStart(2, "0");
 
-type Filter = "all" | "added" | "going" | "saved";
-const FILTERS: { k: Filter; label: string }[] = [
+const FILTERS: { k: CalFilter; label: string }[] = [
   { k: "all", label: "All shows" },
-  { k: "added", label: "In calendar" },
+  { k: "added", label: "In my calendar" },
   { k: "going", label: "Going" },
   { k: "saved", label: "Saved" },
+  { k: "fav", label: "Live concerts of my favourite artists" },
 ];
-const EMPTY: Record<Filter, string> = {
+const EMPTY: Record<CalFilter, string> = {
   all: "No dated shows yet.",
   added: "Nothing in your calendar yet. Tap Add to calendar on a show.",
   going: "No Going shows yet. Tap Going on a show to put it here.",
   saved: "No saved shows yet. Tap the bookmark on a show to keep it here.",
+  fav: "No upcoming shows for your artists yet. We'll add them the moment one is announced.",
 };
 
 // Month grid. Each show is a dot in its stage colour. Green ring = going, magenta ring = saved, tick = in your calendar.
-export function CalendarView({ events: initial, today }: { events: EventView[]; today: string }) {
+export function CalendarView({ events: initial, today, p1Cities = [], p2Cities = [] }: { events: EventView[]; today: string; p1Cities?: string[]; p2Cities?: string[] }) {
   const { events, mark, toggleCalendar, toast, clearToast } = useEventActions(initial, { returnTo: "/calendar" });
   const [ty, tm] = today.split("-").map(Number);
   const [ym, setYm] = useState<[number, number]>([ty, tm]);
   const [sel, setSel] = useState<string | null>(null);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<CalFilter>("all");
+  const { input, setInput, q, city, setCity } = useShowFilters("calendar");
 
-  // Coming back from "Connect Google Calendar": finish adding the show that started it.
-  const done = useRef(false);
-  useEffect(() => {
-    if (done.current) return;
-    done.current = true;
-    const id = new URLSearchParams(window.location.search).get("add");
-    if (id) {
-      toggleCalendar(id, true);
-      window.history.replaceState(null, "", "/calendar");
-    }
-  }, [toggleCalendar]);
-
-  const shown = useMemo(
-    () => events.filter((e) => e.date && (filter === "all" || (filter === "added" && e.inCalendar) || (filter === "going" && e.mine === "going") || (filter === "saved" && e.mine === "saved"))),
-    [events, filter],
-  );
+  // The set of chips comes from the shows under the current chip; counts follow the search box.
+  const prefs = useMemo(() => ({ p1: p1Cities, p2: p2Cities }), [p1Cities, p2Cities]);
+  const chipBase = useMemo(() => filterCalendar(events, { q: "", chip: filter, city: null }), [events, filter]);
+  const cities = useMemo(() => cityChips(chipBase, prefs, filterCalendar(events, { q, chip: filter, city: null })), [chipBase, prefs, events, q, filter]);
+  const activeCity = city && cities.some((c) => c.slug === city) ? city : null;
+  const shown = useMemo(() => filterCalendar(events, { q, chip: filter, city: activeCity }), [events, q, filter, activeCity]);
   const byDay = useMemo(() => {
     const m = new Map<string, EventView[]>();
     for (const e of shown) m.set(e.date!, [...(m.get(e.date!) ?? []), e]);
@@ -60,14 +56,9 @@ export function CalendarView({ events: initial, today }: { events: EventView[]; 
     const key = `${ym[0]}-${pad(ym[1])}`;
     if (!shown.some((e) => e.date!.startsWith(key))) setYm([Number(first.slice(0, 4)), Number(first.slice(5, 7))]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, q, activeCity]);
 
-  const counts: Record<Filter, number> = {
-    all: events.filter((e) => e.date).length,
-    added: events.filter((e) => e.date && e.inCalendar).length,
-    going: events.filter((e) => e.date && e.mine === "going").length,
-    saved: events.filter((e) => e.date && e.mine === "saved").length,
-  };
+  const counts = calendarCounts(events, { q, city: activeCity });
 
   const [y, mo] = ym;
   const firstDow = (new Date(Date.UTC(y, mo - 1, 1)).getUTCDay() + 6) % 7; // Monday first
@@ -84,13 +75,15 @@ export function CalendarView({ events: initial, today }: { events: EventView[]; 
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-1 rounded-card border border-surface-border bg-surface/80 p-1.5 backdrop-blur sm:grid-cols-4" role="group" aria-label="Which shows to show">
+      <SearchBox value={input} onChange={setInput} placeholder="Search artist, city or venue" />
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Which shows to show">
         {FILTERS.map((f) => (
-          <button key={f.k} onClick={() => { setFilter(f.k); setSel(null); }} aria-pressed={filter === f.k} className={`font-display rounded-md px-2 py-3.5 text-xl leading-none font-extrabold sm:text-2xl ${filter === f.k ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}>
-            {f.label} <span className="ml-1 text-base font-bold opacity-70">{counts[f.k]}</span>
+          <button key={f.k} onClick={() => { setFilter(f.k); setSel(null); }} aria-pressed={filter === f.k} className={`rounded-full border px-3 py-1.5 text-sm ${filter === f.k ? "border-accent bg-accent font-bold text-accent-foreground" : "border-surface-border"}`}>
+            {f.label} <span className="ml-0.5 opacity-70" data-testid={`count-${f.k}`}>{counts[f.k]}</span>
           </button>
         ))}
       </div>
+      <CityChips chips={cities} total={filterCalendar(events, { q, chip: filter, city: null }).length} active={activeCity} onPick={(c) => { setCity(c); setSel(null); }} />
 
       <div className="flex items-center gap-2">
         <button onClick={() => go(-1)} aria-label="Previous month" className="rounded-card border border-surface-border px-3 py-1.5">‹</button>
@@ -146,7 +139,7 @@ export function CalendarView({ events: initial, today }: { events: EventView[]; 
         </ul>
       ) : shown.length === 0 ? (
         <p className="rounded-card border border-dashed border-surface-border p-6 text-center text-sm text-muted">
-          {EMPTY[filter]} <Link href="/radar" className="underline">Browse the radar</Link>
+          {q || activeCity ? "No shows match this search." : EMPTY[filter]} <Link href="/radar" className="underline">Browse the radar</Link>
         </p>
       ) : (
         <p className="text-sm text-muted">Pick a day with a dot to see its tickets.</p>

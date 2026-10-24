@@ -12,6 +12,7 @@ import { getConnections } from "@/lib/data/connections";
 import { GoogleCalendarMark, TelegramMark, Tick } from "@/components/icons/BrandIcons";
 import { SpotifyMark } from "@/components/spotify/SpotifyMark";
 import Link from "next/link";
+import { BillingCard } from "@/components/merch/BillingCard";
 
 const ago = (d: Date | null) => {
   if (!d) return "";
@@ -71,6 +72,9 @@ async function Loaded() {
         </section>
 
         <SettingsForm isOwner={!!u.isOwner} embedded />
+        <Suspense fallback={null}>
+          <BillingCard userId={u.id} />
+        </Suspense>
 
         <section className={card} aria-labelledby="history">
           <h2 id="history" className="font-display text-3xl font-extrabold">Alert history</h2>

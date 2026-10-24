@@ -3,6 +3,7 @@ import { schema, type Db } from "@/lib/db";
 import { emailConfigured } from "@/lib/notify/email";
 import { ticketLinkOf, visibleSources } from "@/lib/links/display";
 import { visibleArtist } from "@/lib/identity/store";
+import { scheduleForEvent } from "@/lib/calls/schedule";
 import { computeUrgency, type Urgency } from "./urgency";
 
 const RANK = { info: 0, amber: 1, red: 2 } as const;
@@ -39,6 +40,8 @@ export async function decideForEvents(db: Db, eventIds: string[], onlyUserId?: s
         ),
     ]);
     const distinct = new Set(visibleSources(srcs).map((s) => (s.platform ?? new URL(s.url).hostname).toLowerCase()));
+    // Call-me reminders follow the show: new sale time, moved sale time or cancellation (no-op when nobody opted in).
+    await scheduleForEvent(db, ev.id).catch(() => {});
     for (const w of watchers) {
       const urgency = computeUrgency(
         { ...ev, ticketUrl: ticketLinkOf(ev), saleOpensAt: ev.saleOpensAt, sourceCount: distinct.size, tiers },
